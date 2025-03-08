@@ -1,0 +1,32 @@
+version: "3.8"
+services:
+  searxng:
+    build:
+      context: .
+      dockerfile: searxng.dockerfile
+    expose:
+      - 4000
+    ports:
+      - 4000:8080
+    networks:
+      - AiSearch
+  
+  aisearch_backend:
+    build:
+      context: .
+      dockerfile: backend.dockerfile
+      args:
+        - SEARXNG_API_URL=http://searxng:8080
+    depends_on:
+        - searxng
+    expose:
+        - 8000
+    ports:
+        - 8080:8000
+    networks:
+        - AiSearch
+
+
+
+networks:
+  AiSearch:
