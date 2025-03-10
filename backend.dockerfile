@@ -3,7 +3,7 @@ FROM node:alpine
 ARG SEARXNG_API_URL
 ENV SEARXNG_API_URL=${SEARXNG_API_URL}
 
-WORKDIR /home/aisearch
+WORKDIR /home/aisearch/
 
 COPY src /home/aisearch/src
 

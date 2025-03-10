@@ -1,3 +1,4 @@
+import axios from "axios";
 
 interface SearxngSearchOptions {
   categories?: string[];
@@ -19,6 +20,10 @@ export const searchSearxng = async (
   query: string,
   opts: SearxngSearchOptions
 ) => {
+  if (!process.env.SEARXNG_API_URL) {
+    throw new Error("SEARXNG_API_URL is missing in environment variables.");
+  }
+
   const url = new URL(`${process.env.SEARXNG_API_URL}/search?format=json`);
   url.searchParams.append("q", query);
 
@@ -31,5 +36,9 @@ export const searchSearxng = async (
       url.searchParams.append(key, (opts as any)[key]);
     });
   }
-  const res = 
+  const res = await axios.get(url.toString());
+  const results: SearxngSearchResult[] = res.data.results;
+  const suggestions: string[] = res.data.suggestions;
+
+  return { results, suggestions };
 }
