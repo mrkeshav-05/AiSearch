@@ -77,11 +77,12 @@ search:
   # formats: [html, csv, json, rss]
   formats:
     - html
+    - json
 
 server:
   # Is overwritten by ${SEARXNG_PORT} and ${SEARXNG_BIND_ADDRESS}
   port: 8888
-  bind_address: "127.0.0.1"
+  bind_address: "0.0.0.0"
   # public URL of the instance, to ensure correct inbound links. Is overwritten
   # by ${SEARXNG_URL}.
   base_url: false  # "http://example.com/location"
@@ -95,7 +96,7 @@ server:
   # If your instance owns a /etc/searxng/settings.yml file, then set the following
   # values there.
 
-  secret_key: "1234567890"  # Is overwritten by ${SEARXNG_SECRET}
+  secret_key: "rqf93HsCd+SCnZSASPNpCqmbsYHAcaY8JjOSpUk8Ly2E4lD4"  # Is overwritten by ${SEARXNG_SECRET}
   # Proxy image results through SearXNG. Is overwritten by ${SEARXNG_IMAGE_PROXY}
   image_proxy: false
   # 1.0 and 1.1 are supported
@@ -502,8 +503,24 @@ engines:
     categories: music
 
   - name: baidu
+    baidu_category: general
+    categories: [general]
     engine: baidu
-    shortcut: baidu
+    shortcut: bd
+    disabled: true
+
+  - name: baidu images
+    baidu_category: images
+    categories: [images]
+    engine: baidu
+    shortcut: bdi
+    disabled: true
+
+  - name: baidu kaifa
+    baidu_category: it
+    categories: [it]
+    engine: baidu
+    shortcut: bdk
     disabled: true
 
   - name: wikipedia
@@ -1888,15 +1905,15 @@ engines:
   # For this demo of the sqlite engine download:
   #   https://liste.mediathekview.de/filmliste-v2.db.bz2
   # and unpack into searx/data/filmliste-v2.db
-  # Query to test: "!demo concert"
+  # Query to test: "!mediathekview concert"
   #
-  # - name: demo
+  # - name: mediathekview
   #   engine: sqlite
-  #   shortcut: demo
-  #   categories: general
-  #   result_template: default.html
+  #   shortcut: mediathekview
+  #   categories: [general, videos]
+  #   result_type: MainResult
   #   database: searx/data/filmliste-v2.db
-  #   query_str:  >-
+  #   query_str: >-
   #     SELECT title || ' (' || time(duration, 'unixepoch') || ')' AS title,
   #            COALESCE( NULLIF(url_video_hd,''), NULLIF(url_video_sd,''), url_video) AS url,
   #            description AS content

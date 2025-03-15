@@ -1,3 +1,6 @@
 FROM searxng/searxng
 
-COPY searxng-settings.yml /etc/searxng/searxng-settings.yml
+COPY settings.yml /usr/local/searxng/searx
+COPY limiter.toml /usr/local/searxng/searx
+
+RUN apk add --no-cache curl

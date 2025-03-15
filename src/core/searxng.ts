@@ -18,27 +18,34 @@ interface SearxngSearchResult {
 
 export const searchSearxng = async (
   query: string,
-  opts: SearxngSearchOptions
+  opts: SearxngSearchOptions = {}
 ) => {
-  if (!process.env.SEARXNG_API_URL) {
+  const API_URL = process.env.API_URL;
+  if (!API_URL) {
     throw new Error("SEARXNG_API_URL is missing in environment variables.");
   }
-
-  const url = new URL(`${process.env.SEARXNG_API_URL}/search?format=json`);
-  url.searchParams.append("q", query);
-
-  if (opts) {
-    Object.keys(opts).forEach((key) => {
-      if(Array.isArray((opts as any)[key])) {
-        url.searchParams.append(key, (opts[key as keyof SearxngSearchOptions] as string[]).join(","));
-        return;
-      }
-      url.searchParams.append(key, (opts as any)[key]);
-    });
+  try {
+    console.log("query", query.toLowerCase());
+    const url = new URL(`${API_URL}/search?format=json`);
+    url.searchParams.append("q", query);
+    if(opts){
+      Object.entries(opts).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          url.searchParams.append(key, value.join(","));
+        } else {
+          url.searchParams.append(key, String(value));
+        }
+      });
+    }
+    console.log(url.toString());
+    const res = await axios.get(url.toString());
+    console.log(res.data.results);
+    return {
+      results: res.data.results as SearxngSearchResult[],
+      suggestions: res.data.suggestions as string[],
+    };
+  } catch (error) {
+    console.error("Error fetching from SearxNG:", error);
+    return { results: [], suggestions: [] };
   }
-  const res = await axios.get(url.toString());
-  const results: SearxngSearchResult[] = res.data.results;
-  const suggestions: string[] = res.data.suggestions;
-
-  return { results, suggestions };
 }

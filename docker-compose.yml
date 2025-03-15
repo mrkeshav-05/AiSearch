@@ -1,6 +1,7 @@
-version: "3.8"
 services:
   searxng:
+    container_name: searxng
+    image: searxng
     build:
       context: .
       dockerfile: searxng.dockerfile
@@ -12,6 +13,8 @@ services:
       - AiSearch
   
   aisearch_backend:
+    container_name: aisearch_backend
+    image: backend
     build:
       context: .
       dockerfile: backend.dockerfile
@@ -22,7 +25,7 @@ services:
     expose:
         - 8000
     ports:
-        - 8080:8000
+        - 8000:8000
     networks:
         - AiSearch
 
@@ -30,3 +33,4 @@ services:
 
 networks:
   AiSearch:
+    driver: bridge
