@@ -138,15 +138,15 @@ const imageSearchChain = RunnableSequence.from([
   llm,
   strParser,
   RunnableLambda.from(async (input: string) => {
-    console.log("imageSearchChain -> input", input);
+    // console.log("imageSearchChain -> input", input);
     const res = await searchSearxng(input, {
       categories: ["images"],
       engines: ["bing_images", "google_images"],
     });
-    console.log("imageSearchChain ->res", res);
+    // console.log("imageSearchChain ->res", res);
     const images: { img_src: string; url: string; title: string }[] = [];
     res.results.forEach((result) => {
-      console.log("imageSearchChain -> result", result);
+      // console.log("imageSearchChain -> result", result);
       if(result.img_src && result.url && result.title) {
         images.push({
           img_src: result.img_src,

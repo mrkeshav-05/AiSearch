@@ -20,7 +20,7 @@ export const searchSearxng = async (
   query: string,
   opts: SearxngSearchOptions = {}
 ) => {
-  const API_URL = process.env.API_URL;
+  const API_URL = process.env.SEARXNG_API_URL;
   if (!API_URL) {
     throw new Error("SEARXNG_API_URL is missing in environment variables.");
   }
@@ -37,9 +37,9 @@ export const searchSearxng = async (
         }
       });
     }
-    console.log(url.toString());
+    // console.log(url.toString());
     const res = await axios.get(url.toString());
-    console.log(res.data.results);
+    // console.log(res.data.results);
     return {
       results: res.data.results as SearxngSearchResult[],
       suggestions: res.data.suggestions as string[],

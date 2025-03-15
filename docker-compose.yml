@@ -23,9 +23,9 @@ services:
     depends_on:
         - searxng
     expose:
-        - 8080
+        - 8000
     ports:
-        - 8080:8000
+        - 8000:8000
     networks:
         - AiSearch
 
