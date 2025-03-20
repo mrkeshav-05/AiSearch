@@ -17,15 +17,19 @@
     "@langchain/core": "^0.3.42",
     "@langchain/google-genai": "^0.1.10",
     "axios": "^1.8.2",
+    "compute-cosine-similarity": "^1.1.0",
+    "compute-dot": "^1.1.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "langchain": "^0.3.19"
+    "langchain": "^0.3.19",
+    "ws": "^8.18.1"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/node": "^22.13.10",
+    "@types/ws": "^8.18.0",
     "nodemon": "^3.1.9",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.2"
