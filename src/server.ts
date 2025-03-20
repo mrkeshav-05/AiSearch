@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import http from "http";
 import routes from "./routes";
+import { startWebSocketServer } from "./websocket";
 
 dotenv.config();
 
@@ -28,3 +29,5 @@ app.listen(BACKEND_PORT, () => {
     console.log(`Server is running on port ${BACKEND_PORT}`);
     console.log(`http://localhost:${BACKEND_PORT}`);
 });
+
+startWebSocketServer(server);
