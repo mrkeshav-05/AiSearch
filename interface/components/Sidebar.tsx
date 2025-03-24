@@ -1,6 +1,13 @@
 "use client";
 
-import { SquareIcon, Home, Search, BookOpenText, Link, CircleAlert } from "lucide-react";
+import {
+  SquareIcon,
+  Home,
+  Search,
+  BookOpenText,
+  CircleAlert,
+} from "lucide-react";
+import Link from "next/link";
 import { useSelectedLayoutSegments } from "next/navigation";
 import Layout from "./Layout";
 const Sidebar = ({ children }: { children: React.ReactNode }) => {
@@ -38,8 +45,8 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
               <Link
                 key={i}
                 href={link.href}
-                className={`relative flex flex-row items-center cursor-pointer hover:bg-white/10 hover:text-white duration-150 transition w-full py-2 rounded-lg
-                  ${link.active ? "text-white" : "text-white/70" }
+                className={`relative flex flex-row items-center cursor-pointer  hover:bg-white/10 hover:text-white duration-150 transition w-full py-2 rounded-lg
+                  ${link.active ? "text-white" : "text-white/70"}
                 `}
               >
                 <link.icon className="text-white" />
@@ -49,10 +56,30 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
               </Link>
             ))}
           </div>
-          <Link href="/" className="flex flex-col item-center text-center justify-between">
+          <Link
+            href="/"
+            className="flex flex-col item-center text-center justify-between"
+          >
             <CircleAlert className="text-white" />
           </Link>
         </div>
+      </div>
+      <div className="fixed bottom-0 flex flex-row w-full z-50 items-center gap-x-6 bg-[#111111] px-4 py-4 shadow-sm lg:hidden">
+        {navLinks.map((link, i) => (
+          <Link
+            key={i}
+            href={link.href}
+            className={`relative flex flex-col items-center space-y-1 text-center w-full
+              ${link.active ? "text-white" : "text-white/70"}
+            `}
+          >
+            {link.active && (
+              <div className="absolute top-0 -mt-4 w-full h-1 rounded-l-lg bg-white" />
+            )}
+            <link.icon/>
+            <span className="text-xm">{link.label}</span>
+          </Link>
+        ))}
       </div>
       <Layout>{children}</Layout>
     </div>
