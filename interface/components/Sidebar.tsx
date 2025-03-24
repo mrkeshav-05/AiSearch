@@ -38,7 +38,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         <div className="flex grow flex-col items-center justify-between gap-y-5 overflow-y-auto bg-[#111111] px-2 py-8">
           <a href="/" title="Home">
             <SquareIcon className="text-white cursor-pointer" />
-            <span className="sr-only">Home</span>
           </a>
           <div className="flex items-center flex-col gap-y-3 w-full">
             {navLinks.map((link, i) => (
