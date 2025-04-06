@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "langchain": "^0.3.19",
     "lucide-react": "^0.483.0",
     "next": "15.2.3",
     "react": "^19.0.0",
