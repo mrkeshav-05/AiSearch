@@ -2,6 +2,8 @@
 
 import { Document } from "@langchain/core/documents";
 import { useEffect, useState } from "react";
+import EmptyChat from "./EmptyChat";
+import Chat from "./Chat";
 
 export type Message = {
   id: string;
@@ -126,7 +128,37 @@ const ChatWindow = () => {
     };
     ws?.addEventListener("message", messageHandler);
   };
-  return <div>{messages.length > 0 ? <></> : <></>}</div>;
+
+  const rewrite = (messageId: string) => {
+    const index = messages.findIndex((msg) => msg.id === messageId);
+    if(index === -1) return;
+    const message = messages[index - 1];
+    setMessages((prev) => {
+      return [...prev.slice(0, messages.length > 2 ? index - 1 : 0)];
+    });
+    setChatHistory((prev) => {
+      return [...prev.slice(0, messages.length > 2 ? index - 1 : 0)];
+    });
+    sendMessage(message.content);
+  };
+  
+  return (
+    <div>
+      {messages.length > 0 ? (
+        <>
+          <Chat
+            messages={messages}
+            sendMessage={sendMessage}
+            loading={loading}
+            messageAppeared={messageAppeared}
+            rewrite={rewrite}
+          />
+        </>
+      ) : (
+        <EmptyChat sendMessage={sendMessage} />
+      )}
+    </div>
+  );
 };
 
 export default ChatWindow;
