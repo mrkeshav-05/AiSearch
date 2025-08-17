@@ -146,4 +146,4 @@ const MessageSources = ({sources}:{
   )
 }
 
-export default MessageSources
+export default MessageSources;
