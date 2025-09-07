@@ -1,15 +1,17 @@
 "use client";
 
 import { Document } from "@langchain/core/documents";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import EmptyChat from "./EmptyChat";
 import Chat from "./Chat";
-
+import { getSuggestions } from "@/lib/actions";
+import Navbar from "./Navbar";
 export type Message = {
   id: string;
-  createdAt?: Date;
+  createdAt: Date;
   content: string;
   role: "user" | "assistant";
+  suggestions?: string[];
   sources?: Document[];
 };
 
@@ -41,8 +43,15 @@ const ChatWindow = () => {
   const ws = useSocket(process.env.NEXT_PUBLIC_WS_URL!);
   const [chatHistory, setChatHistory] = useState<[string, string][]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
+  const messagesRef = useRef<Message[]>([]);
   const [loading, setloading] = useState(false);
   const [messageAppeared, setMessageAppeared] = useState(false);
+  const [focusMode, setFocusMode] = useState("webSearch");
+
+  useEffect(() => {
+    messagesRef.current = messages;
+    // console.log(messages)
+  }, [messages]);
 
   const sendMessage = (message: string) => {
     if (loading) return;
@@ -51,26 +60,28 @@ const ChatWindow = () => {
     setMessageAppeared(false);
 
     let sources: Document[] | undefined = undefined;
-    let receivedMessage: "";
+    let receivedMessage: string = "";
     let added = false;
 
     ws?.send(
       JSON.stringify({
         type: "message",
         message: message,
+        focusMode: focusMode,
         history: [...chatHistory, ["human", message]],
       })
     );
-
+    console.log("Sent message to server");
     setMessages((prevMessages) => [
       ...prevMessages,
       {
         content: message,
         id: Math.random().toString(36).substring(7),
         role: "user",
+        createdAt: new Date(),
       },
     ]);
-    const messageHandler = (e: MessageEvent) => {
+    const messageHandler = async (e: MessageEvent) => {
       const data = JSON.parse(e.data);
       if (data.type === "sources") {
         sources = data.sources;
@@ -83,6 +94,7 @@ const ChatWindow = () => {
               id: data.messageId,
               role: "assistant",
               sources: sources,
+              createdAt: new Date(),
             },
           ]);
           added = true;
@@ -98,6 +110,7 @@ const ChatWindow = () => {
               id: data.messageId,
               role: "assistant",
               sources: sources,
+              createdAt: new Date(),
             },
           ]);
           added = true;
@@ -113,7 +126,7 @@ const ChatWindow = () => {
             return message;
           })
         );
-        receivedMessage = data.data;
+        receivedMessage += data.data;
         setMessageAppeared(true);
       }
       if (data.type === "messageEnd") {
@@ -124,6 +137,25 @@ const ChatWindow = () => {
         ]);
         ws?.removeEventListener("message", messageHandler);
         setloading(false);
+
+        const lastMsg = messagesRef.current[messagesRef.current.length - 1];
+
+        if (
+          lastMsg.role === "assistant" &&
+          lastMsg.sources &&
+          lastMsg.sources.length > 0 &&
+          !lastMsg.suggestions
+        ) {
+          const suggestions = await getSuggestions(messagesRef.current);
+          setMessages((prev) =>
+            prev.map((msg) => {
+              if (msg.id === lastMsg.id) {
+                return { ...msg, suggestions: suggestions };
+              }
+              return msg;
+            })
+          );
+        }
       }
     };
     ws?.addEventListener("message", messageHandler);
@@ -146,6 +178,7 @@ const ChatWindow = () => {
     <div>
       {messages.length > 0 ? (
         <>
+          <Navbar messages={messages} />
           <Chat
             messages={messages}
             sendMessage={sendMessage}
@@ -155,7 +188,11 @@ const ChatWindow = () => {
           />
         </>
       ) : (
-        <EmptyChat sendMessage={sendMessage} />
+        <EmptyChat 
+          sendMessage={sendMessage}
+          focusMode={focusMode}
+          setFocusMode={setFocusMode}
+        />
       )}
     </div>
   );
