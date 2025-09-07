@@ -9,5 +9,5 @@ export const initServer = (
     handleConnection(ws);
   });
 
-  console.log(`Websocket server started on port ${process.env.PORT}`);
+  console.log(`Websocket server started on port ${process.env.BACKEND_PORT}`);
 }

@@ -90,16 +90,16 @@ import { searchSearxng } from "../core/searxng";
 import dotenv from "dotenv";
 
 dotenv.config();
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
-if (!GEMINI_API_KEY) {
-  throw new Error("GEMINI_API_KEY is not set in environment variables.");
+if (!GOOGLE_API_KEY) {
+  throw new Error("GOOGLE_API_KEY is not set in environment variables.");
 }
 
 const llm = new ChatGoogleGenerativeAI({
   temperature: 0,
   model: "gemini-2.0-flash",
-  apiKey: GEMINI_API_KEY,
+  apiKey: GOOGLE_API_KEY,
 });
 
 const imageSearchChainPrompt = `

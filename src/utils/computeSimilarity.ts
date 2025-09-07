@@ -1,4 +1,5 @@
 import cosineSimilarity from "compute-cosine-similarity";
+// @ts-ignore
 import dot from "compute-dot";
 
 

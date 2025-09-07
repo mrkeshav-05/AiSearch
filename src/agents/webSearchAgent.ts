@@ -5,7 +5,7 @@ import { ChatPromptTemplate, MessagesPlaceholder, PromptTemplate } from "@langch
 import { RunnableLambda, RunnableMap, RunnableSequence } from "@langchain/core/runnables";
 import { ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
 import { searchSearxng } from "../core/searxng";
-import { Document } from "@langchain/core/dist/documents/document";
+import { Document } from "@langchain/core/documents";
 import formateChatHistoryAsString from "../utils/formateHistory";
 import computerSimilarity from "../utils/computeSimilarity";
 import { EventEmitter } from "stream";
