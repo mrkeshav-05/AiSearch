@@ -8,6 +8,8 @@ import { startWebSocketServer } from "./websocket";
 dotenv.config();
 
 const app = express();
+const server = http.createServer(app);
+
 const BACKEND_PORT = process.env.BACKEND_PORT || 5000;
 
 const corOptions = {
@@ -23,8 +25,6 @@ app.use("/api", routes);
 app.get("/", (req, res) => {
     res.send("Backend is runnings!");
 });
-
-const server = http.createServer(app);
 
 server.listen(BACKEND_PORT, () => {
     console.log(`Server is running on port ${BACKEND_PORT}`);
