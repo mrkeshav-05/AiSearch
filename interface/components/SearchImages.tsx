@@ -23,42 +23,55 @@ const SearchImages = ({
   const [open, setOpen] = useState(false);
   const [slides, setSlides] = useState<{ src: string }[]>([]);
 
+  console.log("[SearchImages] Component rendered with query:", query);
+  console.log("[SearchImages] Loading state:", loading);
+  console.log("[SearchImages] Images state:", images);
+
   return (
     <>
       {!loading && images === null && (
         <button
           onClick={async () => {
+            console.log("[SearchImages] Button clicked! Starting API call...");
             setLoading(true);
-            const res = await fetch(
-              `${process.env.NEXT_PUBLIC_API_URL}/images`,
-              {
-                method: "POST",
-                headers: {
-                  "Content-type": "application/json",
-                },
-                body: JSON.stringify({
-                  query: query,
-                  chat_history: chat_history,
-                }),
-              }
-            );
+            try {
+              console.log("[SearchImages] Making fetch request to:", `${process.env.NEXT_PUBLIC_API_URL}/images`);
+              const res = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/images`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    query: query,
+                    chat_history: chat_history,
+                  }),
+                }
+              );
 
-            const data = await res.json();
+              console.log("[SearchImages] Response status:", res.status);
+              const data = await res.json();
+              console.log("[SearchImages] Response data:", data);
 
-            const images = data.images;
-            setImages(images);
+              const images = data.images;
+              setImages(images);
 
-            setSlides(
-              images.map((image: Image) => {
-                return {
-                  src: image.img_src,
-                };
-              })
-            );
-            setLoading(false);
+              setSlides(
+                images.map((image: Image) => {
+                  return {
+                    src: image.img_src,
+                  };
+                })
+              );
+              setLoading(false);
+              console.log("[SearchImages] API call completed successfully");
+            } catch (error) {
+              console.error("[SearchImages] API call failed:", error);
+              setLoading(false);
+            }
           }}
-          className="
-        border border-dashed border-[#1C1C1C] hover:bg-[#1c1c1c] active:scale-95 duration-200 transition px-4 py-2 flex flex-row items-center justify-between rounded-lg text-white text-sm w-full"
+          className="border border-dashed border-[#1C1C1C] hover:bg-[#1c1c1c] active:scale-95 duration-200 transition px-4 py-2 flex flex-row items-center justify-between rounded-lg text-white text-sm w-full"
         >
           <div className="flex flex-row items-center space-x-2">
             <ImagesIcon size={17} />

@@ -24,7 +24,7 @@ const llm = new ChatGoogleGenerativeAI({
 
 
 const embeddings = new GoogleGenerativeAIEmbeddings({
-  modelName: "text-embedding-3-large",
+  modelName: "text-embedding-004",
 })
 
 const basicSearchRetrieverPrompt = `
@@ -75,31 +75,51 @@ const rerankDocs = async ({
   if (docs.length === 0) {
     return docs;
   }
+  
   const docsWithContent = docs.filter(
     (doc) => doc.pageContent && doc.pageContent.length > 0
   );
-  const docEmbeddings = await embeddings.embedDocuments(
-    docsWithContent.map((doc) => doc.pageContent)
-  );
+  
+  console.log("[RERANK] Number of docs with content:", docsWithContent.length);
+  
+  if (docsWithContent.length === 0) {
+    return [];
+  }
 
-  const queryEmbedding = await embeddings.embedQuery(query);
+  try {
+    const docEmbeddings = await embeddings.embedDocuments(
+      docsWithContent.map((doc) => doc.pageContent)
+    );
+    
+    console.log("[RERANK] Doc embeddings count:", docEmbeddings.length);
+    console.log("[RERANK] First embedding length:", docEmbeddings[0]?.length);
 
-  const similarity = docEmbeddings.map((docEmbedding, i) => {
-    const sim = computerSimilarity(queryEmbedding, docEmbedding)
+    const queryEmbedding = await embeddings.embedQuery(query);
+    console.log("[RERANK] Query embedding length:", queryEmbedding.length);
 
-    return {
-      index: i,
-      similarity: sim
-    }
-  })
+    const similarity = docEmbeddings.map((docEmbedding, i) => {
+      console.log(`[RERANK] Computing similarity for doc ${i}, embedding length:`, docEmbedding.length);
+      const sim = computerSimilarity(queryEmbedding, docEmbedding);
+      console.log(`[RERANK] Similarity for doc ${i}:`, sim);
 
-  const sortedDocs = similarity
-    .sort((a, b) => b.similarity - a.similarity)
-    .filter((sim) => sim.similarity > 0.5)
-    .slice(0, 10)
-    .map((sim) => docsWithContent[sim.index]);
+      return {
+        index: i,
+        similarity: sim
+      }
+    });
 
-  return sortedDocs;
+    const sortedDocs = similarity
+      .sort((a, b) => b.similarity - a.similarity)
+      .filter((sim) => sim.similarity > 0.3) // Lowered threshold
+      .slice(0, 10)
+      .map((sim) => docsWithContent[sim.index]);
+
+    console.log("[RERANK] Final sorted docs count:", sortedDocs.length);
+    return sortedDocs;
+  } catch (error) {
+    console.error("[RERANK] Error in rerankDocs:", error);
+    return docsWithContent.slice(0, 10); // Return first 10 docs if reranking fails
+  }
 }
 
 
@@ -134,14 +154,14 @@ const basicWebSearchRetrieverChain = RunnableSequence.from([
   }),
 ]);
 
-const basicWebSearchAnsweringChain = RunnableSequence.from([
+const basicWebSearchAnsweringChain = (chat_history_string: string) => RunnableSequence.from([
   RunnableMap.from({
     query: (input: BasicChainInput) => input.query,
-    chat_history: (input: BasicChainInput) => input.chat_history,
+    chat_history: (input: BasicChainInput) => input.chat_history, // Keep this as BaseMessage[]
     context: RunnableSequence.from([
       (input) => ({
         query: input.query,
-        chatt_history: formateChatHistoryAsString(input.chat_history),
+        chat_history: chat_history_string, // Use string for the retriever chain
       }),
       basicWebSearchRetrieverChain
         .pipe(rerankDocs)
@@ -153,7 +173,7 @@ const basicWebSearchAnsweringChain = RunnableSequence.from([
   }),
   ChatPromptTemplate.fromMessages([
     ["system", basicWebSearchResponsePrompt],
-    new MessagesPlaceholder('chat_history'),
+    new MessagesPlaceholder('chat_history'), // This needs BaseMessage[], which we provide above
     ["user", "{query}"]
   ]),
   chatLLM,
@@ -191,11 +211,24 @@ const handleStream = async (
   }
 }
 
-const basicWebSearch = (query: string, history: BaseMessage[]) => {
+const basicWebSearch = (query: string, history: BaseMessage[], chat_history_string: string) => {
   const emitter = new EventEmitter();
 
   try {
-    const stream = basicWebSearchAnsweringChain.streamEvents(
+    // Handle simple greetings without going through the full pipeline
+    if (query.toLowerCase().trim() === "hi" || query.toLowerCase().trim() === "hello") {
+      // Send a simple response for greetings
+      setTimeout(() => {
+        emitter.emit('data', JSON.stringify({
+          type: "response",
+          data: "Hello! I'm AiSearch, your AI assistant. How can I help you today?"
+        }));
+        emitter.emit('end');
+      }, 100);
+      return emitter;
+    }
+
+    const stream = basicWebSearchAnsweringChain(chat_history_string).streamEvents(
       {
         query: query,
         chat_history: history
@@ -206,20 +239,19 @@ const basicWebSearch = (query: string, history: BaseMessage[]) => {
     );
     handleStream(stream, emitter);
   } catch (error) {
+    console.error("[WEBSEARCH] Error in basicWebSearch:", error);
     emitter.emit(
       "error",
       JSON.stringify({ data: "An error has occurred please try again later" })
     );
-    console.log(error);
   }
 
   return emitter;
 }
 
-
-const handleWebSearch = (message: string, history: BaseMessage[]) => {
-  const emmitter = basicWebSearch(message, history);
-  return emmitter;
+const handleWebSearch = (message: string, history: BaseMessage[], chat_history: string) => {
+  const emitter = basicWebSearch(message, history, chat_history);
+  return emitter;
 }
 
 export default handleWebSearch;
