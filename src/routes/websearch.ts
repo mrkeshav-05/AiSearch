@@ -1,6 +1,18 @@
 import { Request, Response } from 'express';
 import { HumanMessage, AIMessage, BaseMessage } from '@langchain/core/messages';
+import { ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
+import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
+import type { Embeddings } from "@langchain/core/embeddings";
 import handleWebSearch from '../agents/webSearchAgent';
+
+const llm = new ChatGoogleGenerativeAI({
+  modelName: "gemini-2.0-flash",
+  temperature: 0.7,
+}) as BaseChatModel;
+
+const embeddings = new GoogleGenerativeAIEmbeddings({
+  modelName: "text-embedding-004",
+}) as Embeddings;
 
 const testWebSearch = async (req: Request, res: Response) => {
   try {
@@ -28,7 +40,7 @@ const testWebSearch = async (req: Request, res: Response) => {
 
     console.log('[API] Formatted chat history:', chat_history);
 
-    const emitter = handleWebSearch(message, formattedHistory, chat_history);
+    const emitter = handleWebSearch(message, formattedHistory, llm, embeddings);
     
     let response = '';
     let sources: any[] = [];

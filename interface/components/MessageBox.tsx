@@ -43,7 +43,7 @@ const MessageBox = ({
 }) => {
   const [parsedMessage, setParsedMessage] = useState(message.content);
   const [speechMessage, setSpeechMessage] = useState(message.content);
-  console.log("[MessageBox] Rendering message:", message.role, "messageIndex:", messageIndex);
+  // console.log("[MessageBox] Rendering message:", message.role, "messageIndex:", messageIndex);
   console.log(parsedMessage);
   console.log(message);
   useEffect(() => {
@@ -71,7 +71,8 @@ const MessageBox = ({
         )
       );
     }
-
+    console.log(message);
+    console.log(parsedMessage);
     setParsedMessage(message.content);
   }, [message]);
 

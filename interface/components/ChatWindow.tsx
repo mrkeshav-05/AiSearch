@@ -84,7 +84,7 @@ const ChatWindow = () => {
     const messageHandler = async (e: MessageEvent) => {
       const data = JSON.parse(e.data);
       if (data.type === "sources") {
-        sources = data.sources;
+        sources = data.data;
 
         if (!added) {
           setMessages((prevMessages) => [

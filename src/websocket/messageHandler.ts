@@ -1,6 +1,18 @@
 import { AIMessage, BaseMessage, HumanMessage } from "@langchain/core/messages";
 import { WebSocket } from "ws";
+import { ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
+import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
+import type { Embeddings } from "@langchain/core/embeddings";
 import handleWebSearch from "../agents/webSearchAgent";
+
+const llm = new ChatGoogleGenerativeAI({
+  modelName: "gemini-2.0-flash",
+  temperature: 0.7,
+}) as BaseChatModel;
+
+const embeddings = new GoogleGenerativeAIEmbeddings({
+  modelName: "text-embedding-004",
+}) as Embeddings;
 
 type Message = {
   type: string;
@@ -48,7 +60,7 @@ export const handleMessage = async (message: string, ws: WebSocket) => {
       switch(focusMode){
         case "webSearch":{
           // Pass both the message, history, and formatted chat_history
-          const emitter = handleWebSearch(paresedMessage.message, history, chat_history);
+          const emitter = handleWebSearch(paresedMessage.message, history, llm, embeddings);
           
           emitter.on("data", (data) => {
             const paresedData = JSON.parse(data);
