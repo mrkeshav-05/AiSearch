@@ -1,9 +1,37 @@
+// Message Input Component
+// Handles user message input with adaptive UI and keyboard shortcuts
+// Provides single-line and multi-line input modes with smooth transitions
+
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import TextareaAutosize from "react-textarea-autosize";
 import { Attach, CopilotToggle } from "./MessageInputActions";
 import { ArrowUp } from "lucide-react";
 
+/**
+ * Adaptive message input component for user queries
+ * 
+ * @param sendMessage - Function to send user message via WebSocket
+ * @param loading - Boolean indicating if AI is currently processing
+ * 
+ * Features:
+ * - Auto-resizing textarea that grows with content
+ * - Adaptive UI: single-line (pill) vs multi-line (rounded) layout
+ * - Keyboard shortcuts: Enter to send, Shift+Enter for new line
+ * - Visual feedback for loading states
+ * - Copilot integration toggle (future feature)
+ * - File attachment support (future feature)
+ * 
+ * State Management:
+ * - message: Current input text
+ * - textareaRows: Number of rows for auto-sizing
+ * - mode: UI layout mode based on content size
+ * - copilotEnabled: Toggle for AI assistance features
+ * 
+ * UI Modes:
+ * - single: Horizontal pill layout for short messages
+ * - multi: Vertical rounded layout for longer messages
+ */
 const MessageInput = ({
   sendMessage,
   loading,
@@ -15,6 +43,7 @@ const MessageInput = ({
   const [message, setMessage] = useState("");
   const [textareaRows, setTextareaRows] = useState(1);
 
+  // UI mode state: adapts layout based on message length
   const [mode, setMode] = useState<"multi" | "single">("single");
 
   useEffect(() => {

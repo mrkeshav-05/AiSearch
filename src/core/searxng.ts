@@ -1,5 +1,17 @@
+// SearxNG Search Integration
+// Interfaces with SearxNG metasearch engine for web search results
+// SearxNG aggregates results from multiple search engines while preserving privacy
+
 import axios from "axios";
 
+/**
+ * Configuration options for SearxNG search requests
+ * 
+ * @property categories - Search categories (e.g., ['general', 'images', 'news'])
+ * @property engines - Specific search engines to use (e.g., ['google', 'bing'])
+ * @property language - Language preference for results (e.g., 'en', 'es')
+ * @property pageno - Page number for pagination
+ */
 interface SearxngSearchOptions {
   categories?: string[];
   engines?: string[];
@@ -7,6 +19,16 @@ interface SearxngSearchOptions {
   pageno?: number;
 }
 
+/**
+ * Structure of individual search result from SearxNG
+ * 
+ * @property title - Page title
+ * @property url - Full URL of the result
+ * @property img_src - Optional image URL for visual results
+ * @property thumbnail - Optional thumbnail image URL
+ * @property content - Page excerpt/snippet
+ * @property author - Optional author information
+ */
 interface SearxngSearchResult {
   title: string;
   url: string;

@@ -1,3 +1,7 @@
+// Chat Component - Main conversation interface
+// Displays message history and handles user interactions in active chat sessions
+// Manages message rendering, auto-scrolling, and loading states
+
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -6,6 +10,34 @@ import MessageBox from "./MessageBox";
 import MessageBoxLoading from "./MessageBoxLoading";
 import MessageInput from "./MessageInput";
 
+/**
+ * Main chat interface component for active conversations
+ * 
+ * @param messages - Array of conversation messages (user and AI)
+ * @param sendMessage - Function to send new message via WebSocket
+ * @param loading - Boolean indicating if AI is processing
+ * @param messageAppeared - Boolean indicating if new message started appearing
+ * @param rewrite - Function to regenerate AI response for a message
+ * 
+ * Features:
+ * - Message history display with scrolling
+ * - Auto-scroll to newest messages
+ * - Loading indicators during AI processing
+ * - Message rewrite functionality
+ * - Responsive layout with proper spacing
+ * - Dynamic divider width calculation
+ * 
+ * State Management:
+ * - dividerWidth: Width of message divider for consistent spacing
+ * - dividerRef: Reference for measuring divider dimensions
+ * - messageEnd: Reference for auto-scrolling to latest message
+ * 
+ * Layout Structure:
+ * - Message history container (scrollable)
+ * - Individual MessageBox components for each message
+ * - Loading indicator for pending AI responses
+ * - Fixed message input at bottom
+ */
 const Chat = ({
   loading,
   messageAppeared,
@@ -19,6 +51,7 @@ const Chat = ({
   messageAppeared: boolean;
   rewrite: (messageId: string) => void;
 }) => {
+  // State for dynamic UI measurements
   const [dividerWidth, setDividerWidth] = useState(0);
   const dividerRef = useRef<HTMLDivElement | null>(null);
   const messageEnd = useRef<HTMLDivElement | null>(null);
