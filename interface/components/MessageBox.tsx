@@ -60,16 +60,20 @@ const MessageBox = ({
         "tell me about his products at apple",
         "tell me about this personal journey",
       ];
-      return setParsedMessage(
-        message.content.replace(
-          regex,
-          (_, number) =>
-            `<a href="${
-              message.sources?.[number - 1]?.metadata?.url
-            }" target="_blank" className="bg-[#1C1C1C] px-1 rounded ml-1 no-underline text-xs text-white/70 relative">
-            ${number}</a>`
-        )
+      
+      // Create proper markdown links instead of HTML
+      const processedContent = message.content.replace(
+        regex,
+        (_, number) => {
+          const sourceIndex = parseInt(number) - 1;
+          if (message.sources?.[sourceIndex]?.metadata?.url) {
+            return `[[${number}]](${message.sources[sourceIndex].metadata.url})`;
+          }
+          return `[${number}]`;
+        }
       );
+      
+      return setParsedMessage(processedContent);
     }
     console.log(message);
     console.log(parsedMessage);
@@ -113,7 +117,20 @@ const MessageBox = ({
                 />
                 <h3 className="text-white font-medium text-xl">Answer</h3>
               </div>
-              <Markdown className="prose max-w-none break-words prose-invert prose-p:leading-relaxed prose-pre:p-0 text-white text-sm md:text-base font-medium">
+              <Markdown 
+                className="prose max-w-none break-words prose-invert prose-p:leading-relaxed prose-pre:p-0 text-white text-sm md:text-base font-medium prose-a:bg-[#1C1C1C] prose-a:px-1 prose-a:rounded prose-a:ml-1 prose-a:no-underline prose-a:text-xs prose-a:text-white/70 prose-a:relative"
+                options={{
+                  overrides: {
+                    a: {
+                      props: {
+                        target: '_blank',
+                        rel: 'noopener noreferrer',
+                        className: 'citation-link bg-[#1C1C1C] px-1 rounded ml-1 no-underline text-xs text-white/70 relative hover:bg-[#2A2A2A] transition-colors'
+                      }
+                    }
+                  }
+                }}
+              >
                 {parsedMessage}
               </Markdown>
               {!loading && (
