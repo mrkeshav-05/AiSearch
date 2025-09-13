@@ -86,13 +86,31 @@ const rerankDocs = async ({
     return [];
   }
 
+  // If we have too many docs, take top 15 by length to speed up processing
+  const limitedDocs = docsWithContent.length > 15 
+    ? docsWithContent
+        .sort((a, b) => b.pageContent.length - a.pageContent.length)
+        .slice(0, 15)
+    : docsWithContent;
+
+  console.log("[RERANK] Processing limited docs count:", limitedDocs.length);
+
   try {
-    const docEmbeddings = await embeddings.embedDocuments(
-      docsWithContent.map((doc) => doc.pageContent)
-    );
+    // Batch process embeddings to avoid timeout
+    const batchSize = 5;
+    const docEmbeddings = [];
+    
+    for (let i = 0; i < limitedDocs.length; i += batchSize) {
+      const batch = limitedDocs.slice(i, i + batchSize);
+      console.log(`[RERANK] Processing batch ${i / batchSize + 1}, docs ${i + 1}-${Math.min(i + batchSize, limitedDocs.length)}`);
+      
+      const batchEmbeddings = await embeddings.embedDocuments(
+        batch.map((doc) => doc.pageContent)
+      );
+      docEmbeddings.push(...batchEmbeddings);
+    }
     
     console.log("[RERANK] Doc embeddings count:", docEmbeddings.length);
-    console.log("[RERANK] First embedding length:", docEmbeddings[0]?.length);
 
     const queryEmbedding = await embeddings.embedQuery(query);
     console.log("[RERANK] Query embedding length:", queryEmbedding.length);
@@ -112,13 +130,13 @@ const rerankDocs = async ({
       .sort((a, b) => b.similarity - a.similarity)
       .filter((sim) => sim.similarity > 0.3) // Lowered threshold
       .slice(0, 10)
-      .map((sim) => docsWithContent[sim.index]);
+      .map((sim) => limitedDocs[sim.index]);
 
     console.log("[RERANK] Final sorted docs count:", sortedDocs.length);
     return sortedDocs;
   } catch (error) {
     console.error("[RERANK] Error in rerankDocs:", error);
-    return docsWithContent.slice(0, 10); // Return first 10 docs if reranking fails
+    return limitedDocs.slice(0, 10); // Return first 10 docs if reranking fails
   }
 }
 
@@ -142,7 +160,11 @@ const basicWebSearchRetrieverChain = RunnableSequence.from([
     const res = await searchSearxng(input, {
       language: "en"
     });
-    const documents = res.results.map((result) => new Document({
+    
+    // Limit initial results to prevent timeout issues
+    const limitedResults = res.results.slice(0, 20); // Limit to 20 results instead of all
+    
+    const documents = limitedResults.map((result) => new Document({
       pageContent: result.content || "",
       metadata: {
         title: result.title,
@@ -186,65 +208,81 @@ const handleStream = async (
   stream: AsyncGenerator<StreamEvent, any, unknown>,
   emitter: EventEmitter
 ) => {
-  for await (const event of stream) {
-    if (event.event === "on_chain_end" && event.name === "FinalSourceRetriever") {
-      emitter.emit(
-        'data',
-        JSON.stringify({
-          type: "sources",
-          data: event.data.output
-        })
-      );
+  try {
+    for await (const event of stream) {
+      if (event.event === "on_chain_end" && event.name === "FinalSourceRetriever") {
+        emitter.emit(
+          'data',
+          JSON.stringify({
+            type: "sources",
+            data: event.data.output
+          })
+        );
+      }
+      if (event.event === "on_chain_end" && event.name === "FinalResponseGenerator") {
+        emitter.emit(
+          'data',
+          JSON.stringify({
+            type: "response",
+            data: event.data.output // Changed from chunk to output for final response
+          })
+        );
+        // Emit end after final response is generated
+        emitter.emit("end");
+      }
+      if (event.event === "on_chain_error") {
+        console.error("[STREAM] Chain error:", event);
+        emitter.emit("error", JSON.stringify({ 
+          data: "An error occurred during search processing" 
+        }));
+      }
     }
-    if (event.event === "on_chain_end" && event.name === "FinalResponseGenerator") {
-      emitter.emit(
-        'data',
-        JSON.stringify({
-          type: "response",
-          data: event.data.chunk
-        })
-      )
-    }
-    if (event.event === "on_chain_error" && event.name === "FinalResponseGenerator") {
-      emitter.emit("end")
-    }
+  } catch (error) {
+    console.error("[STREAM] Stream handling error:", error);
+    emitter.emit("error", JSON.stringify({ 
+      data: "Stream processing failed" 
+    }));
   }
 }
 
 const basicWebSearch = (query: string, history: BaseMessage[], chat_history_string: string) => {
   const emitter = new EventEmitter();
 
-  try {
-    // Handle simple greetings without going through the full pipeline
-    if (query.toLowerCase().trim() === "hi" || query.toLowerCase().trim() === "hello") {
-      // Send a simple response for greetings
-      setTimeout(() => {
+  // Process the search asynchronously
+  (async () => {
+    try {
+      // Handle simple greetings without going through the full pipeline
+      if (query.toLowerCase().trim() === "hi" || query.toLowerCase().trim() === "hello") {
+        // Send a simple response for greetings
         emitter.emit('data', JSON.stringify({
           type: "response",
           data: "Hello! I'm AiSearch, your AI assistant. How can I help you today?"
         }));
         emitter.emit('end');
-      }, 100);
-      return emitter;
-    }
-
-    const stream = basicWebSearchAnsweringChain(chat_history_string).streamEvents(
-      {
-        query: query,
-        chat_history: history
-      },
-      {
-        version: "v1"
+        return;
       }
-    );
-    handleStream(stream, emitter);
-  } catch (error) {
-    console.error("[WEBSEARCH] Error in basicWebSearch:", error);
-    emitter.emit(
-      "error",
-      JSON.stringify({ data: "An error has occurred please try again later" })
-    );
-  }
+
+      console.log("[WEBSEARCH] Starting search for query:", query);
+
+      const stream = basicWebSearchAnsweringChain(chat_history_string).streamEvents(
+        {
+          query: query,
+          chat_history: history
+        },
+        {
+          version: "v1"
+        }
+      );
+      
+      await handleStream(stream, emitter);
+    } catch (error) {
+      console.error("[WEBSEARCH] Error in basicWebSearch:", error);
+      emitter.emit(
+        "error",
+        JSON.stringify({ data: "An error has occurred please try again later" })
+      );
+    }
+  })();
 
   return emitter;
 }

@@ -18,7 +18,14 @@ const corOptions = {
     allowedHeaders: ["Content-Type"],
 }
 app.use(cors(corOptions));
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+
+// Set request timeout to 3 minutes
+app.use((req, res, next) => {
+    req.setTimeout(180000); // 3 minutes
+    res.setTimeout(180000); // 3 minutes
+    next();
+});
 
 app.use("/api", routes);
 
