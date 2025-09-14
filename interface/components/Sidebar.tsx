@@ -36,8 +36,26 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     <div className="bg-red-500">
       <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-20 lg:flex-col">
         <div className="flex grow flex-col items-center justify-between gap-y-5 overflow-y-auto bg-[#111111] px-2 py-8">
-          <a href="/" title="Home">
-            <SquareIcon className="text-white cursor-pointer" />
+          <a
+            href="/"
+            title="AI Search - Home"
+            className="flex items-center justify-center p-2 rounded-xl hover:bg-white/10 transition-all duration-200 group"
+          >
+            <img
+              src="brain.svg"
+              alt="AI Brain Logo"
+              className="w-10 h-10 transition-all  brightness-0 invert  "
+              style={{
+                filter: 'brightness(0) invert(1)',
+                transition: 'all 0.2s ease-in-out'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.filter = 'brightness(0) saturate(100%) invert(47%) sepia(69%) saturate(6010%) hue-rotate(194deg) brightness(101%) contrast(101%)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.filter = 'brightness(0) invert(1)';
+              }}
+            />
           </a>
           <div className="flex items-center flex-col gap-y-3 w-full">
             {navLinks.map((link, i) => (
@@ -50,7 +68,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
               >
                 <link.icon className="text-white" />
                 {link.active && (
-                  <div className="absolute right-0 -mr-2 h-full w-1 rounded-l-lg bg-white" />
+                  <div className="absolute right-0 -mr-2 h-full w-1 rounded-l-lg bg-[#24A0ED]" />
                 )}
               </Link>
             ))}
@@ -73,7 +91,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
             `}
           >
             {link.active && (
-              <div className="absolute top-0 -mt-4 w-full h-1 rounded-l-lg bg-white" />
+              <div className="absolute top-0 -mt-4 w-full h-1 rounded-l-lg bg-[#24A0ED]" />
             )}
             <link.icon/>
             <span className="text-xm">{link.label}</span>

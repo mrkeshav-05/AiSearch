@@ -6,28 +6,28 @@ import EmptyChatMessageInput from "./EmptyChatMessageInput";
 
 /**
  * Empty chat screen component shown when conversation is empty
- * 
+ *
  * @param sendMessage - Function to send user message to backend
  * @param focusMode - Current search mode (webSearch, imageSearch, etc.)
  * @param setFocusMode - Function to change search mode
- * 
+ *
  * Features:
  * - Welcome message to guide users
  * - Input field for first query
  * - Focus mode selector for different search types
  * - Centered layout for optimal user experience
- * 
+ *
  * Visual Design:
  * - Full screen centered layout
  * - Subtle text color for welcome message
  * - Spacious design with proper spacing
  * - Responsive padding and margins
  */
-const EmptyChat = ({ 
+const EmptyChat = ({
   sendMessage,
   focusMode,
   setFocusMode,
-} : {
+}: {
   sendMessage: (message: string) => void;
   focusMode: string;
   setFocusMode: (mode: string) => void;
@@ -35,8 +35,15 @@ const EmptyChat = ({
   return (
     <div className="flex flex-col items-center justify-center min-h-screen max-w-screen mx-auto p-2 space-y-8">
       {/* Welcome message to encourage user interaction */}
-      <h2 className="text-white/70 text-3xl font-medium -mt-8">Research begin here.</h2>
-      
+      <div className="text-[#24A0ED] text-5xl font-light -mt-8 ">
+        <img
+          src="brain2.svg"
+          alt="AI Brain Logo"
+          className="w-10 h-10 inline-block mr-3 mb-3 "
+        />
+        AiSearch
+      </div>
+
       {/* Input component for first message with focus mode selection */}
       <EmptyChatMessageInput
         sendMessage={sendMessage}

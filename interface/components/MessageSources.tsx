@@ -2,8 +2,10 @@ import { Document } from '@langchain/core/documents';
 import React, { Fragment, useState } from 'react';
 import {
   Dialog,
+  DialogPanel,
+  DialogTitle,
   Transition,
-
+  TransitionChild
   } from "@headlessui/react";
 const MessageSources = ({sources}:{
     sources: Document[];
@@ -80,7 +82,7 @@ const MessageSources = ({sources}:{
         <Dialog as="div" className={"relative z-50"} onClose={closeModal}>
           <div className="fixed inset-0 overflow-y-auto">
             <div className="flex min-h-full items-center justify-center p-4 text-center">
-              <Transition.Child
+              <TransitionChild
                 as={Fragment}
                 enter="ease-out duration-200"
                 enterFrom="opacity-0 scale-95"
@@ -89,16 +91,16 @@ const MessageSources = ({sources}:{
                 leaveFrom="opacity-100 scale-200"
                 leaveTo="opacity-0 scale-95"
               >
-                <Dialog.Panel
+                <DialogPanel
                   className={
                     "w-full max-w-md transform rounded-2xl bg-[#111111] border border-[#1c1c1c] p-6 text-left align-middle shadow-xl transition-all"
                   }
                 >
-                  <Dialog.Title
+                  <DialogTitle
                     className={"text-lg font-medium leading-6 text-white"}
                   >
                     Sources
-                  </Dialog.Title>
+                  </DialogTitle>
                   <div className="grid grid-cols-2 gap-2 overflow-auto max-h-[300px] mt-2 pr-2">
                     {sources.map((source, i) => (
                       <a
@@ -135,8 +137,8 @@ const MessageSources = ({sources}:{
                       </a>
                     ))}
                   </div>
-                </Dialog.Panel>
-              </Transition.Child>
+                </DialogPanel>
+              </TransitionChild>
             </div>
           </div>
         </Dialog>
