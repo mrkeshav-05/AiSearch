@@ -81,7 +81,7 @@ const MessageInput = ({
         onHeightChange={(height, props) => {
           setTextareaRows(Math.ceil(height / props.rowHeight));
         }}
-        className="transition bg-transparent placeholder:text-white/50 placeholder:text-sm text-sm text-white resize-none focus:outline-none w-full max-h-24 lg:max-h-36 xl:max-h-48 flex-grow flex-shrink"
+        className="transition bg-transparent text-[#24A0ED] caret-[#24A0ED] placeholder:text-[#20648e] placeholder:text-sm text-sm  resize-none focus:outline-none w-full max-h-24 lg:max-h-36 xl:max-h-48 flex-grow flex-shrink"
         placeholder="Ask a follow up"
       />
       {mode === "single" && (
@@ -108,7 +108,7 @@ const MessageInput = ({
             />
             <button
               disabled={message.trim().length === 0 || loading}
-              className="bg-[#24A0ED] text-white disabled:text-white/50 hover:bg-opacity-85 transition duration-100 disabled:bg-[#ececec21] rounded-full p-2"
+              className="bg-[#24A0ED] text-white disabled:text-white/50 hover:bg-opacity-85 hover:text-[#24A0ED] transition duration-100 disabled:bg-[#ececec21] rounded-full p-2"
             >
               <ArrowUp size={17} />
             </button>

@@ -86,7 +86,7 @@ const MessageBox = ({
     <>
       {message.role === "user" && (
         <div className={cn("w-full", messageIndex === 0 ? "pt-16" : "pt-8")}>
-          <h2 className="text-white font-medium text-3xl lg:w-9/12">
+          <h2 className="font-medium text-3xl lg:w-9/12 text-[#24A0ED]">
             {message.content}
           </h2>
         </div>
