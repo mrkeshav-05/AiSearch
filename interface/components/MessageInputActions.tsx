@@ -9,7 +9,7 @@ export const Attach = () => {
   return (
     <button
       type="button"
-      className="p-2 text-white/50 rounded-xl hover:bg-[#1c1c1c] transition duration-200 hover:text-white"
+      className="p-2 text-white/50 rounded-xl hover:bg-[#1c1c1c] transition duration-200 hover:text-[#24A0ED]"
     >
       <CopyPlus />
     </button>
@@ -73,7 +73,7 @@ export const Focus = ({
       <PopoverButton
         type="button"
         className={
-          "p-2 text-white/50 active:scale-95 rounded-xl hover:bg-[#1c1c1c] transition duration-200 hover:text-white"
+          "p-2 text-white/50 active:scale-95 rounded-xl hover:bg-[#1c1c1c] transition duration-200 hover:text-[#24A0ED]"
         }
       >
         {focusMode !== "webSearch" ? (
@@ -84,7 +84,7 @@ export const Focus = ({
             </p>
           </div>
         ) : (
-          <ScanEye />
+          <ScanEye className="text-[#24A0ED]" />
         )}
       </PopoverButton>
       <Transition
@@ -156,7 +156,7 @@ export const CopilotToggle = ({
           "text-xs font-medium transition-colors duration-150 ease-in-out",
           copilotEnabled
             ? "text-[#24A0ED]"
-            : "text-white/50 group-hover:text-white"
+            : "text-white/50 hover:text-[#24A0ED]"
         )}
       >
         Copilot

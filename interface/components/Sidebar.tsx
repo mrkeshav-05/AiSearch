@@ -39,7 +39,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
           <a
             href="/"
             title="AI Search - Home"
-            className="flex items-center justify-center p-2 rounded-xl hover:bg-white/10 transition-all duration-200 group"
+            className="flex items-center justify-center p-2 rounded-xl transition-all duration-200 group"
           >
             <img
               src="brain.svg"
@@ -57,16 +57,17 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
               }}
             />
           </a>
-          <div className="flex items-center flex-col gap-y-3 w-full">
+          <div className="flex items-center flex-col gap-y-4 w-full">
             {navLinks.map((link, i) => (
               <Link
                 key={i}
                 href={link.href}
-                className={`relative flex flex-row items-center cursor-pointer  hover:bg-white/10 hover:text-white duration-150 transition w-full py-2 rounded-lg
-                  ${link.active ? "text-white" : "text-white/70"}
+                className={`relative flex flex-row items-center cursor-pointer hover:text-[#24A0ED] duration-150 transition w-full py-2 rounded-lg
+                  ${link.active ? "text-[#24A0ED]" : "text-white/70"}
                 `}
               >
-                <link.icon className="text-white" />
+                <link.icon className="text-white hover:text-[#24A0ED] w-full" />
+
                 {link.active && (
                   <div className="absolute right-0 -mr-2 h-full w-1 rounded-l-lg bg-[#24A0ED]" />
                 )}
@@ -77,7 +78,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
             href="/"
             className="flex flex-col item-center text-center justify-between"
           >
-            <CircleAlert className="text-white" />
+            <CircleAlert className="text-white hover:text-[#24A0ED]" />
           </Link>
         </div>
       </div>
@@ -86,7 +87,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
           <Link
             key={i}
             href={link.href}
-            className={`relative flex flex-col items-center space-y-1 text-center w-full
+            className={`relative flex flex-col items-center space-y-1 text-center w-full hover:text-[#24A0ED]
               ${link.active ? "text-white" : "text-white/70"}
             `}
           >

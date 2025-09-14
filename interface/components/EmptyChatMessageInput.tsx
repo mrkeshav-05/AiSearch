@@ -36,7 +36,7 @@ const EmptyChatMessageInput = ({
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           minRows={2}
-          className="bg-transparent placeholder:text-white/50 text-sm text-white resize-none focus:outline-none w-full max-h-24 lg:max-h-36 xl:max-h-48"
+          className="bg-transparent  text-sm text-[#24A0ED] resize-none focus:outline-none w-full max-h-24 lg:max-h-36 xl:max-h-48 caret-[#24A0ED]"
           placeholder="Ask anything..."
         />
         <div className="flex flex-row items-center justify-between mt-4">
@@ -56,7 +56,7 @@ const EmptyChatMessageInput = ({
               disabled={message.trim().length === 0}
               className="bg-[#24A0ED] text-white disabled:text-white/50 hover:bg-opacity-85 transition duration-100 disabled:bg-[#ececec21] rounded-full p-2"
             >
-              <ArrowRight size={17} />
+              <ArrowRight size={17} className="hover:text-[#24A0ED]" />
             </button>
           </div>
         </div>
