@@ -77,7 +77,7 @@ export const Focus = ({
         }
       >
         {focusMode !== "webSearch" ? (
-          <div className="flex flex-row items-center space-x-1">
+          <div className="flex flex-row items-center space-x-1 text-[#24A0ED]">
             {focusModes.find((mode) => mode.key === focusMode)?.icon}
             <p className="text-xs font-medium">
               {focusModes.find((mode) => mode.key === focusMode)?.title}
