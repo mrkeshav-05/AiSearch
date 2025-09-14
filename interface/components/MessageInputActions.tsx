@@ -2,7 +2,7 @@ import { CopyPlus, Globe, Pencil, ScanEye, SwatchBook } from "lucide-react";
 import { Switch } from "./ui/switch";
 import { cn } from "@/lib/utils";
 import { SiYoutube, SiReddit } from "@icons-pack/react-simple-icons";
-import { Popover, Transition } from "@headlessui/react";
+import { Popover, PopoverButton, Transition } from "@headlessui/react";
 import { Fragment } from "react";
 
 export const Attach = () => {
@@ -69,8 +69,8 @@ export const Focus = ({
   setFocusMode: (mode: string) => void;
 }) => {
   return (
-    <Popover className={"fixed w-full max-w-[15rem] md:max-w-md lg:max-w-lg"}>
-      <Popover.Button
+    <Popover className={""}>
+      <PopoverButton
         type="button"
         className={
           "p-2 text-white/50 active:scale-95 rounded-xl hover:bg-[#1c1c1c] transition duration-200 hover:text-white"
@@ -86,7 +86,7 @@ export const Focus = ({
         ) : (
           <ScanEye />
         )}
-      </Popover.Button>
+      </PopoverButton>
       <Transition
         as={Fragment}
         enter="transition ease-out duration-150"
