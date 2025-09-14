@@ -1,3 +1,7 @@
+// Search Images Component
+// Provides image search functionality with lightbox gallery view
+// Handles API calls to backend image search endpoint and displays results in a grid layout
+
 import { ImagesIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
 import Image from "next/image";
@@ -5,6 +9,13 @@ import Lightbox from "yet-another-react-lightbox";
 import "yet-another-react-lightbox/styles.css";
 import { Message } from "./ChatWindow";
 
+/**
+ * Image search result structure from backend API
+ * 
+ * @property url - Source page URL
+ * @property img_src - Direct image URL for display
+ * @property title - Image title or description
+ */
 type Image = {
   url: string;
   img_src: string;
@@ -22,18 +33,32 @@ const SearchImages = ({
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [slides, setSlides] = useState<{ src: string }[]>([]);
+  const [currentQuery, setCurrentQuery] = useState<string>("");
 
   console.log("[SearchImages] Component rendered with query:", query);
   console.log("[SearchImages] Loading state:", loading);
   console.log("[SearchImages] Images state:", images);
 
+  // Reset images when query changes
+  if (currentQuery !== query && currentQuery !== "") {
+    console.log("[SearchImages] Query changed, resetting images");
+    setImages(null);
+    setSlides([]);
+  }
+
   return (
     <>
-      {!loading && images === null && (
+      {!loading && (images === null || (Array.isArray(images) && images.length === 0)) && (
         <button
           onClick={async () => {
             console.log("[SearchImages] Button clicked! Starting API call...");
             setLoading(true);
+            setCurrentQuery(query); // Track current query
+            
+            // Reset previous data
+            setImages(null);
+            setSlides([]);
+            
             try {
               console.log("[SearchImages] Making fetch request to:", `${process.env.NEXT_PUBLIC_API_URL}/images`);
               const res = await fetch(
@@ -54,20 +79,34 @@ const SearchImages = ({
               const data = await res.json();
               console.log("[SearchImages] Response data:", data);
 
-              const images = data.images;
-              setImages(images);
-
-              setSlides(
-                images.map((image: Image) => {
-                  return {
+              const fetchedImages = data.images;
+              
+              // Validate fetched images
+              if (Array.isArray(fetchedImages) && fetchedImages.length > 0) {
+                setImages(fetchedImages);
+                
+                // Create slides with proper validation
+                const validSlides = fetchedImages
+                  .filter((image: Image) => image && image.img_src)
+                  .map((image: Image) => ({
                     src: image.img_src,
-                  };
-                })
-              );
+                  }));
+                
+                setSlides(validSlides);
+                console.log("[SearchImages] API call completed successfully with", fetchedImages.length, "images");
+              } else {
+                console.log("[SearchImages] No valid images found or empty response");
+                // Set to null to show the button again, not empty array
+                setImages(null);
+                setSlides([]);
+              }
+              
               setLoading(false);
-              console.log("[SearchImages] API call completed successfully");
             } catch (error) {
               console.error("[SearchImages] API call failed:", error);
+              // Set to null to show the button again, allowing retry
+              setImages(null);
+              setSlides([]);
               setLoading(false);
             }
           }}
@@ -90,7 +129,7 @@ const SearchImages = ({
           ))}
         </div>
       )}
-      {images !== null && images.length > 0 && (
+      {Array.isArray(images) && images.length > 0 && (
         <>
           <div className="grid grid-cols-2 gap-2">
             {images.length > 4
@@ -98,15 +137,18 @@ const SearchImages = ({
                   <Image
                     onClick={() => {
                       setOpen(true);
-                      setSlides([
-                        slides[i],
-                        ...slides.slice(0, i),
-                        ...slides.slice(i + 1),
-                      ]);
+                      // Safely reorder slides with bounds checking
+                      if (slides && slides.length > i) {
+                        setSlides([
+                          slides[i],
+                          ...slides.slice(0, i),
+                          ...slides.slice(i + 1),
+                        ]);
+                      }
                     }}
-                    key={i}
+                    key={`${image.url}-${i}`}
                     src={image.img_src}
-                    alt={image.title}
+                    alt={image.title || "Search result image"}
                     width={640}
                     height={360}
                     className="h-full w-full aspect-video object-cover rounded-lg transition duration-200 active:scale-95 cursor-zoom-in hover:scale-[1.02]"
@@ -116,15 +158,18 @@ const SearchImages = ({
                   <Image
                     onClick={() => {
                       setOpen(true);
-                      setSlides([
-                        slides[i],
-                        ...slides.slice(0, i),
-                        ...slides.slice(i + 1),
-                      ]);
+                      // Safely reorder slides with bounds checking
+                      if (slides && slides.length > i) {
+                        setSlides([
+                          slides[i],
+                          ...slides.slice(0, i),
+                          ...slides.slice(i + 1),
+                        ]);
+                      }
                     }}
-                    key={i}
+                    key={`${image.url}-${i}`}
                     src={image.img_src}
-                    alt={image.title}
+                    alt={image.title || "Search result image"}
                     width={640}
                     height={360}
                     className="h-full w-full aspect-video object-cover rounded-lg transition duration-200 active:scale-95 cursor-zoom-in hover:scale-[1.02]"

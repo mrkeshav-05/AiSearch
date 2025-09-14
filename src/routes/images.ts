@@ -3,6 +3,7 @@
 // Unlike web search, image search uses traditional REST API instead of WebSocket
 
 import express from 'express';
+import { BaseMessage, HumanMessage, AIMessage } from '@langchain/core/messages';
 import imageSearchChain from '../agents/imageSearchAgent';
 
 // Create router instance for image-specific routes
@@ -46,12 +47,42 @@ router.post("/", async (req, res) => {
     // Extract search parameters from request body
     const {query, chat_history} = req.body;
 
+    console.log("[Images Route] Query:", query);
+    console.log("[Images Route] Chat history type:", typeof chat_history, "Length:", chat_history?.length);
+
+    // Convert chat_history from frontend format to BaseMessage format
+    // Frontend sends: Message[] with {content, role} structure
+    // Backend needs: BaseMessage[] with proper LangChain message objects
+    let formattedHistory: BaseMessage[] = [];
+    
+    if (Array.isArray(chat_history)) {
+      try {
+        formattedHistory = chat_history.map((msg: any) => {
+          // Handle different possible formats
+          if (msg.role === "user" || msg.role === "human") {
+            return new HumanMessage({ content: msg.content });
+          } else if (msg.role === "assistant" || msg.role === "ai") {
+            return new AIMessage({ content: msg.content });
+          } else {
+            // Fallback for unknown roles
+            return new HumanMessage({ content: msg.content || String(msg) });
+          }
+        });
+        console.log("[Images Route] Converted", chat_history.length, "messages to BaseMessage format");
+      } catch (conversionError) {
+        console.error("[Images Route] Error converting chat history:", conversionError);
+        formattedHistory = [];
+      }
+    }
+
     // Execute image search using dedicated image search agent
     // Returns array of image results with metadata
     const images = await imageSearchChain.invoke({
-      chat_history,
+      chat_history: formattedHistory,
       query,
     })
+    
+    console.log("[Images Route] Search completed, returning", images?.length || 0, "images");
     
     // Return successful response with image results
     res.status(200).json({images});
