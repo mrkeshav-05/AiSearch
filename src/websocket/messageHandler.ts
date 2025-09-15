@@ -9,6 +9,7 @@ import type { BaseChatModel } from "@langchain/core/language_models/chat_models"
 import type { Embeddings } from "@langchain/core/embeddings";
 import handleWebSearch from "../agents/webSearchAgent";
 import handleYouTubeSearch from "../agents/youtubeSearchAgent";
+import handleRedditSearch from "../agents/redditSearchAgent";
 
 // Initialize Google Gemini LLM for AI response generation
 // Temperature 0.7 provides balanced creativity vs consistency
@@ -167,6 +168,46 @@ export const handleMessage = async (message: string, ws: WebSocket) => {
               )
             }
             // Send YouTube video sources to frontend for citation display
+            else if(paresedData.type === "sources"){
+              ws.send(
+                JSON.stringify({
+                  type: "sources",
+                  data: paresedData.data,
+                  messageId: id
+                })
+              )
+            }
+          })
+
+          emitter.on("end", () => {
+            ws.send(JSON.stringify({type: "messageEnd", messageId: id}))
+          })
+          
+          emitter.on("error", (data) => {
+            const paresedData = JSON.parse(data);
+            ws.send(JSON.stringify({type: "error", data: paresedData.data}))
+          })
+          break;
+        }
+        case "redditSearch":{
+          // Initialize Reddit search agent with Gemini AI for Reddit discussions analysis
+          const emitter = handleRedditSearch(paresedMessage.message, history, llm, embeddings);
+          
+          // Handle streaming data from Reddit search agent
+          emitter.on("data", (data) => {
+            const paresedData = JSON.parse(data);
+            
+            // Stream AI response chunks to frontend for real-time display
+            if(paresedData.type === "response"){
+              ws.send(
+                JSON.stringify({
+                  type: "message", // Frontend expects "message" type for AI responses
+                  data: paresedData.data,
+                  messageId: id
+                })
+              )
+            }
+            // Send Reddit sources to frontend for citation display
             else if(paresedData.type === "sources"){
               ws.send(
                 JSON.stringify({
