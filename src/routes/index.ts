@@ -4,6 +4,7 @@
 
 import express from "express";
 import imagesRouter from "./images";
+import videosRouter from "./videos"; // Temporarily disabled due to TypeScript issues
 
 // Create main router instance for mounting sub-routes
 const router = express.Router();
@@ -12,7 +13,8 @@ const router = express.Router();
  * Image Search Routes
  * 
  * Available endpoints:
- * - GET /api/images/* - Image search functionality
+ * - POST /api/images - Image search functionality
+ * - GET /api/images/health - Health check for image search
  * 
  * Purpose:
  * - Handles image-specific search requests
@@ -20,6 +22,20 @@ const router = express.Router();
  * - REST API for image operations that don't require real-time streaming
  */
 router.use("/images", imagesRouter);
+
+/**
+ * Video Search Routes - Temporarily disabled due to TypeScript issues
+ * 
+ * Available endpoints (when enabled):
+ * - POST /api/videos - Video search functionality using YouTube engine
+ * - GET /api/videos/health - Health check for video search
+ * 
+ * Purpose:
+ * - Handles video-specific search requests via REST API
+ * - Alternative to WebSocket-based video search for direct API access
+ * - Useful for external integrations and non-streaming applications
+ */
+router.use("/videos", videosRouter); // Temporarily disabled
 
 // Note: Web search functionality is handled via WebSocket in websocket/messageHandler.ts
 // No REST endpoints needed for web search due to real-time streaming requirements

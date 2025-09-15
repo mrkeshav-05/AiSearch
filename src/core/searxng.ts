@@ -36,6 +36,7 @@ interface SearxngSearchResult {
   thumbnail?: string;
   content?: string;
   author?: string;
+  iframe_src?: string;
 }
 
 export const searchSearxng = async (

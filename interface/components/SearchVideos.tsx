@@ -6,10 +6,13 @@ import "yet-another-react-lightbox/styles.css";
 import { Message } from "./ChatWindow";
 
 type Video = {
-  url: string;
-  img_src: string;
-  title: string;
-  iframe_src: string;
+  metadata: {
+    url: string;
+    thumbnail: string;
+    title: string;
+    iframe_src: string;
+  };
+  pageContent: string;
 };
 
 declare module "yet-another-react-lightbox" {
@@ -35,7 +38,7 @@ const SearchVideos = ({
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [slides, setSlides] = useState<VideoSlide[]>([]);
-
+  console.log(videos);
   return (
     <>
       {!loading && videos === null && (
@@ -58,15 +61,15 @@ const SearchVideos = ({
 
             const data = await res.json();
 
-            const videos = data.videos;
+            const videos = data.sources;
             setVideos(videos);
 
             setSlides(
               videos.map((video: Video) => {
                 return {
                   type: "video-slide",
-                  iframe_src: video.iframe_src,
-                  src: video.img_src,
+                  iframe_src: video.metadata.iframe_src,
+                  src: video.metadata.thumbnail,
                 };
               })
             );
@@ -96,42 +99,78 @@ const SearchVideos = ({
         <>
           <div className="grid grid-cols-2 gap-2">
             {videos.length > 4
-              ? videos.slice(0, 3).map((video, i) => (
-                  <Image
-                    onClick={() => {
-                      setOpen(true);
-                      setSlides([
-                        slides[i],
-                        ...slides.slice(0, i),
-                        ...slides.slice(i + 1),
-                      ]);
-                    }}
-                    key={i}
-                    src={video.img_src}
-                    alt={video.title}
-                    width={640}
-                    height={360}
-                    className="h-full w-full aspect-video object-cover rounded-lg transition duration-200 active:scale-95 cursor-zoom-in hover:scale-[1.02]"
-                  />
-                ))
-              : videos.map((video, i) => (
-                  <Image
-                    onClick={() => {
-                      setOpen(true);
-                      setSlides([
-                        slides[i],
-                        ...slides.slice(0, i),
-                        ...slides.slice(i + 1),
-                      ]);
-                    }}
-                    key={i}
-                    src={video.img_src}
-                    alt={video.title}
-                    width={640}
-                    height={360}
-                    className="h-full w-full aspect-video object-cover rounded-lg transition duration-200 active:scale-95 cursor-zoom-in hover:scale-[1.02]"
-                  />
-                ))}
+              ? videos.slice(0, 3).map((video, i) => {
+                  const imageSrc = video.metadata.thumbnail;
+                  return imageSrc ? (
+                    <Image
+                      onClick={() => {
+                        setOpen(true);
+                        setSlides([
+                          slides[i],
+                          ...slides.slice(0, i),
+                          ...slides.slice(i + 1),
+                        ]);
+                      }}
+                      key={i}
+                      src={imageSrc}
+                      alt={video.metadata.title || 'Video thumbnail'}
+                      width={640}
+                      height={360}
+                      className="h-full w-full aspect-video object-cover rounded-lg transition duration-200 active:scale-95 cursor-zoom-in hover:scale-[1.02]"
+                    />
+                  ) : (
+                    <div
+                      key={i}
+                      onClick={() => {
+                        setOpen(true);
+                        setSlides([
+                          slides[i],
+                          ...slides.slice(0, i),
+                          ...slides.slice(i + 1),
+                        ]);
+                      }}
+                      className="h-full w-full aspect-video bg-gray-300 rounded-lg transition duration-200 active:scale-95 cursor-zoom-in hover:scale-[1.02] flex items-center justify-center text-gray-600"
+                    >
+                      <span className="text-sm">No Image</span>
+                    </div>
+                  );
+                })
+              : videos.map((video, i) => {
+                  const imageSrc = video.metadata.thumbnail;
+                  return imageSrc ? (
+                    <Image
+                      onClick={() => {
+                        setOpen(true);
+                        setSlides([
+                          slides[i],
+                          ...slides.slice(0, i),
+                          ...slides.slice(i + 1),
+                        ]);
+                      }}
+                      key={i}
+                      src={imageSrc}
+                      alt={video.metadata.title || 'Video thumbnail'}
+                      width={640}
+                      height={360}
+                      className="h-full w-full aspect-video object-cover rounded-lg transition duration-200 active:scale-95 cursor-zoom-in hover:scale-[1.02]"
+                    />
+                  ) : (
+                    <div
+                      key={i}
+                      onClick={() => {
+                        setOpen(true);
+                        setSlides([
+                          slides[i],
+                          ...slides.slice(0, i),
+                          ...slides.slice(i + 1),
+                        ]);
+                      }}
+                      className="h-full w-full aspect-video bg-gray-300 rounded-lg transition duration-200 active:scale-95 cursor-zoom-in hover:scale-[1.02] flex items-center justify-center text-gray-600"
+                    >
+                      <span className="text-sm">No Image</span>
+                    </div>
+                  );
+                })}
             {videos.length > 4 && (
               <button
                 onClick={() => setOpen(true)}
@@ -139,16 +178,26 @@ const SearchVideos = ({
               bg-[#111111] hover:bg-[#1c1c1c] transition duration-200 active:scale-95 h-auto w-full rounded-lg flex flex-col justify-between text-white p-2 hover:scale-[1.02]"
               >
                 <div className="flex flex-row items-center space-x-1">
-                  {videos.slice(3, 6).map((video, i) => (
-                    <Image
-                      key={i}
-                      src={video.img_src}
-                      alt={video.title}
-                      width={120}
-                      height={60}
-                      className="h-6 w-12 rounded-md lg:h-3 lg:w-6 aspect-video object-cover"
-                    />
-                  ))}
+                  {videos.slice(3, 6).map((video, i) => {
+                    const imageSrc = video.metadata.thumbnail;
+                    return imageSrc ? (
+                      <Image
+                        key={i}
+                        src={imageSrc}
+                        alt={video.metadata.title || 'Video thumbnail'}
+                        width={120}
+                        height={60}
+                        className="h-6 w-12 rounded-md lg:h-3 lg:w-6 aspect-video object-cover"
+                      />
+                    ) : (
+                      <div
+                        key={i}
+                        className="h-6 w-12 rounded-md lg:h-3 lg:w-6 aspect-video bg-gray-600 flex items-center justify-center"
+                      >
+                        <span className="text-xs text-gray-300">?</span>
+                      </div>
+                    );
+                  })}
                 </div>
                 <p className="text-white/70 text-xs">
                   View {videos.length - 3} more

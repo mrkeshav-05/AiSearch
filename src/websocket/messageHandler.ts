@@ -11,6 +11,7 @@ import handleWebSearch from "../agents/webSearchAgent";
 import handleYouTubeSearch from "../agents/youtubeSearchAgent";
 import handleRedditSearch from "../agents/redditSearchAgent";
 import handleAcademicSearch from "../agents/academicSearchAgent";
+import handleVideoSearch from "../agents/videoSearchAgent";
 
 // Initialize Google Gemini LLM for AI response generation
 // Temperature 0.7 provides balanced creativity vs consistency
@@ -249,6 +250,46 @@ export const handleMessage = async (message: string, ws: WebSocket) => {
               )
             }
             // Send academic sources to frontend for citation display
+            else if(paresedData.type === "sources"){
+              ws.send(
+                JSON.stringify({
+                  type: "sources",
+                  data: paresedData.data,
+                  messageId: id
+                })
+              )
+            }
+          })
+
+          emitter.on("end", () => {
+            ws.send(JSON.stringify({type: "messageEnd", messageId: id}))
+          })
+          
+          emitter.on("error", (data) => {
+            const paresedData = JSON.parse(data);
+            ws.send(JSON.stringify({type: "error", data: paresedData.data}))
+          })
+          break;
+        }
+        case "videoSearch":{
+          // Initialize Video search agent with Gemini AI for video content analysis
+          const emitter = handleVideoSearch(paresedMessage.message, history, llm, embeddings);
+          
+          // Handle streaming data from Video search agent
+          emitter.on("data", (data) => {
+            const paresedData = JSON.parse(data);
+            
+            // Stream AI response chunks to frontend for real-time display
+            if(paresedData.type === "response"){
+              ws.send(
+                JSON.stringify({
+                  type: "message", // Frontend expects "message" type for AI responses
+                  data: paresedData.data,
+                  messageId: id
+                })
+              )
+            }
+            // Send video sources to frontend for citation display
             else if(paresedData.type === "sources"){
               ws.send(
                 JSON.stringify({
