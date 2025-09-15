@@ -652,7 +652,7 @@ engines:
     engine: crossref
     shortcut: cr
     timeout: 30
-    disabled: true
+    disabled: false
 
   - name: crowdview
     engine: json_engine
@@ -1636,7 +1636,7 @@ engines:
   - name: pubmed
     engine: pubmed
     shortcut: pub
-    timeout: 3.0
+    timeout: 6.0
 
   - name: pypi
     shortcut: pypi
@@ -1840,8 +1840,9 @@ engines:
 
   - name: semantic scholar
     engine: semantic_scholar
-    disabled: true
+    disabled: false
     shortcut: se
+    timeout: 6.0
 
   # Spotify needs API credentials
   # - name: spotify
