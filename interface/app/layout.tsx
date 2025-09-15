@@ -27,7 +27,7 @@ export default function RootLayout({
       className="h-full"
       lang="en">
       <head>
-        <link rel="icon" href="brain.svg"/>
+        <link rel="icon" href="brain2.svg"/>
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased h-full`}
