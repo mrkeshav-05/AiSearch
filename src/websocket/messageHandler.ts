@@ -12,6 +12,7 @@ import handleYouTubeSearch from "../agents/youtubeSearchAgent";
 import handleRedditSearch from "../agents/redditSearchAgent";
 import handleAcademicSearch from "../agents/academicSearchAgent";
 import handleVideoSearch from "../agents/videoSearchAgent";
+import handleWritingAssistant from "../agents/writingAssistant";
 
 // Initialize Google Gemini LLM for AI response generation
 // Temperature 0.7 provides balanced creativity vs consistency
@@ -58,7 +59,11 @@ type Message = {
  * 
  * Supported Focus Modes:
  * - "webSearch": Web search with AI response generation
- * - "imageSearch": Image search functionality (future)
+ * - "youtubeSearch": YouTube video search and analysis
+ * - "redditSearch": Reddit discussions search and analysis
+ * - "academicSearch": Academic papers search and analysis
+ * - "videoSearch": General video search functionality
+ * - "writingAssistant": AI writing assistant without web search
  * 
  * Response Types Sent to Frontend:
  * - { type: "message", data: string, messageId: string } - AI response chunks
@@ -294,6 +299,36 @@ export const handleMessage = async (message: string, ws: WebSocket) => {
               ws.send(
                 JSON.stringify({
                   type: "sources",
+                  data: paresedData.data,
+                  messageId: id
+                })
+              )
+            }
+          })
+
+          emitter.on("end", () => {
+            ws.send(JSON.stringify({type: "messageEnd", messageId: id}))
+          })
+          
+          emitter.on("error", (data) => {
+            const paresedData = JSON.parse(data);
+            ws.send(JSON.stringify({type: "error", data: paresedData.data}))
+          })
+          break;
+        }
+        case "writingAssistant":{
+          // Initialize Writing Assistant agent with Gemini AI for writing tasks
+          const emitter = handleWritingAssistant(paresedMessage.message, history, llm, embeddings);
+          
+          // Handle streaming data from Writing Assistant agent
+          emitter.on("data", (data) => {
+            const paresedData = JSON.parse(data);
+            
+            // Stream AI response chunks to frontend for real-time display
+            if(paresedData.type === "response"){
+              ws.send(
+                JSON.stringify({
+                  type: "message", // Frontend expects "message" type for AI responses
                   data: paresedData.data,
                   messageId: id
                 })
