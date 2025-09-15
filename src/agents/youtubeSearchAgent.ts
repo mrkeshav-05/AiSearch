@@ -193,7 +193,7 @@ const createBasicYoutubeSearchRetrieverChain = (llm: BaseChatModel) => {
 
       const res = await searchSearxng(input, {
         language: "en",
-        engines: ["youtube"],
+        categories: ["videos"],
       });
 
       const documents = res.results

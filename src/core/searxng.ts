@@ -60,7 +60,17 @@ export const searchSearxng = async (
       });
     }
     // console.log(url.toString());
-    const res = await axios.get(url.toString());
+    const res = await axios.get(url.toString(), {
+      headers: {
+        'User-Agent': 'AiSearch/1.0.0 (https://github.com/mrkeshav-05/AiSearch)',
+        'Accept': 'application/json',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'X-Forwarded-For': '127.0.0.1',
+        'X-Real-IP': '127.0.0.1',
+        'Connection': 'close'
+      },
+      timeout: 10000 // 10 second timeout
+    });
     // console.log(res.data.results);
     return {
       results: res.data.results as SearxngSearchResult[],

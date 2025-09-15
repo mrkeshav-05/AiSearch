@@ -1,12 +1,10 @@
-[real_ip]
+[botdetection]
 
-# Number of values to trust for X-Forwarded-For.
-
-x_for = 1
+# Number of values to trust for X-Forwarded-For headers
+trusted_proxies = 1
 
 # The prefix defines the number of leading bits in an address that are compared
 # to determine whether or not an address is part of a (client) network.
-
 ipv4_prefix = 32
 ipv6_prefix = 48
 
@@ -32,8 +30,11 @@ block_ip = [
 
 pass_ip = [
   "172.18.0.0/16",  # Allow internal Docker network
-  "192.168.0.0/16",
-  "10.0.0.0/8"      # IPv6 linklocal / wins over botdetection.ip_limit.filter_link_local
+  "172.16.0.0/12",  # Docker default bridge networks
+  "192.168.0.0/16", # Private network range
+  "10.0.0.0/8",     # Private network range
+  "127.0.0.1/32",   # localhost
+  "::1/128"         # IPv6 localhost
 ]
 
 # Activate passlist of (hardcoded) IPs from the SearXNG organization,
