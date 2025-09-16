@@ -5,6 +5,7 @@
 import express from "express";
 import imagesRouter from "./images";
 import videosRouter from "./videos"; // Temporarily disabled due to TypeScript issues
+import suggestionsRouter from "./suggestions";
 
 // Create main router instance for mounting sub-routes
 const router = express.Router();
@@ -36,6 +37,19 @@ router.use("/images", imagesRouter);
  * - Useful for external integrations and non-streaming applications
  */
 router.use("/videos", videosRouter); // Temporarily disabled
+
+/**
+ * Suggestions Routes
+ * 
+ * Available endpoints:
+ * - POST /api/suggestions - Generate AI-powered suggestions based on chat history
+ * 
+ * Purpose:
+ * - Provides follow-up question suggestions to enhance user experience
+ * - Analyzes conversation context to generate relevant queries
+ * - Uses LangChain with Google Gemini for intelligent suggestion generation
+ */
+router.use("/suggestions", suggestionsRouter);
 
 // Note: Web search functionality is handled via WebSocket in websocket/messageHandler.ts
 // No REST endpoints needed for web search due to real-time streaming requirements
