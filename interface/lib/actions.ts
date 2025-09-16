@@ -1,19 +1,28 @@
 import { Message } from "@/components/ChatWindow";
 
 export const getSuggestions = async (chatHistory: Message[]) => {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/suggestions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      chat_history: chatHistory,
-      chat_model: "GPT-3.5-turbo",
-      chat_model_provider: "openai",
-    }),
-  });
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/suggestions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        chatHistory: chatHistory.map(msg => ({
+          role: msg.role,
+          content: msg.content
+        }))
+      }),
+    });
 
-  const data = (await res.json()) as { suggestions: string[] };
+    if (!res.ok) {
+      throw new Error(`Failed to fetch suggestions: ${res.status}`);
+    }
 
-  return data.suggestions;
+    const data = (await res.json()) as { suggestions: string[] };
+    return data.suggestions;
+  } catch (error) {
+    console.error("Error fetching suggestions:", error);
+    return [];
+  }
 };

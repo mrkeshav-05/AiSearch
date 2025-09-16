@@ -47,6 +47,7 @@ const ChatWindow = () => {
   const [loading, setloading] = useState(false);
   const [messageAppeared, setMessageAppeared] = useState(false);
   const [focusMode, setFocusMode] = useState("webSearch");
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
   useEffect(() => {
     messagesRef.current = messages;
@@ -138,23 +139,28 @@ const ChatWindow = () => {
         ws?.removeEventListener("message", messageHandler);
         setloading(false);
 
+        // Fetch suggestions for the last assistant message
         const lastMsg = messagesRef.current[messagesRef.current.length - 1];
 
-        if (
-          lastMsg.role === "assistant" &&
-          lastMsg.sources &&
-          lastMsg.sources.length > 0 &&
-          !lastMsg.suggestions
-        ) {
-          const suggestions = await getSuggestions(messagesRef.current);
-          setMessages((prev) =>
-            prev.map((msg) => {
-              if (msg.id === lastMsg.id) {
-                return { ...msg, suggestions: suggestions };
-              }
-              return msg;
-            })
-          );
+        if (lastMsg.role === "assistant" && !lastMsg.suggestions) {
+          setSuggestionsLoading(true);
+          try {
+            const suggestions = await getSuggestions(messagesRef.current);
+            if (suggestions.length > 0) {
+              setMessages((prev) =>
+                prev.map((msg) => {
+                  if (msg.id === lastMsg.id) {
+                    return { ...msg, suggestions: suggestions };
+                  }
+                  return msg;
+                })
+              );
+            }
+          } catch (error) {
+            console.error("Failed to fetch suggestions:", error);
+          } finally {
+            setSuggestionsLoading(false);
+          }
         }
       }
     };
@@ -185,6 +191,7 @@ const ChatWindow = () => {
             loading={loading}
             messageAppeared={messageAppeared}
             rewrite={rewrite}
+            suggestionsLoading={suggestionsLoading}
           />
         </>
       ) : (

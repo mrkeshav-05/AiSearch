@@ -44,12 +44,14 @@ const Chat = ({
   rewrite,
   sendMessage,
   messages,
+  suggestionsLoading,
 }: {
   messages: Message[];
   sendMessage: (message: string) => void;
   loading: boolean;
   messageAppeared: boolean;
   rewrite: (messageId: string) => void;
+  suggestionsLoading: boolean;
 }) => {
   // State for dynamic UI measurements
   const [dividerWidth, setDividerWidth] = useState(0);
@@ -91,6 +93,7 @@ const Chat = ({
               rewrite={rewrite}
               messageIndex={i}
               sendMessage={sendMessage}
+              suggestionsLoading={suggestionsLoading}
             />
             {!isLast && msg.role === "assistant" && (
               <div className="h-px w-full bg-[#1C1C1C]" />

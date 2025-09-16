@@ -30,7 +30,8 @@ const MessageBox = ({
   dividerRef,
   isLast,
   rewrite,
-  sendMessage
+  sendMessage,
+  suggestionsLoading
 }: {
   message: Message;
   messageIndex: number;
@@ -40,6 +41,7 @@ const MessageBox = ({
   isLast: boolean;
   rewrite: (messageId: string) => void;
   sendMessage: (message: string) => void;
+  suggestionsLoading: boolean;
 }) => {
   const [parsedMessage, setParsedMessage] = useState(message.content);
   const [speechMessage, setSpeechMessage] = useState(message.content);
@@ -55,11 +57,6 @@ const MessageBox = ({
       const regex = /\[(\d+)\]/g;
 
       setSpeechMessage(message.content.replace(regex, ""));
-
-      message.suggestions = [
-        "tell me about his products at apple",
-        "tell me about this personal journey",
-      ];
       
       // Create proper markdown links instead of HTML
       const processedContent = message.content.replace(
@@ -166,37 +163,55 @@ const MessageBox = ({
                 </div>
               )}
               {isLast &&
-                message.suggestions &&
-                message.suggestions.length > 0 &&
                 message.role === "assistant" &&
                 !loading && (
                   <>
-                    <div className="h-px w-full bg-[#1C1C1C]" />
-                    <div className="flex flex-col space-y-3 text-white">
-                      <div className="flex flex-row items-center space-x-2 mt-4">
-                        <Layers3 />
-                        <h3 className="text-xl font-medium">Related</h3>
-                      </div>
-                      <div className="flex flex-col space-y-3">
-                        {message.suggestions.map((suggestion, i) => (
-                          <div
-                            key={i}
-                            className="flex flex-col space-y-3 text-sm"
-                          >
-                            <div className="h-px w-full bg-[#1C1C1C]" />
-                            <div
-                              onClick={() => sendMessage(suggestion)}
-                              className="cursor-pointer flex flex-row justify-between font-medium space-x-2 items-center"
-                            >
-                              <p className="hover:text-[#24A0ED] transition duration-200">
-                                {suggestion}
-                              </p>
-                              <Plus size={20} className="text-[#24A0ED]" />
-                            </div>
+                    {(message.suggestions || suggestionsLoading) && (
+                      <>
+                        <div className="h-px w-full bg-[#1C1C1C]" />
+                        <div className="flex flex-col space-y-3 text-white">
+                          <div className="flex flex-row items-center space-x-2 mt-4">
+                            <Layers3 className={suggestionsLoading ? "animate-spin" : ""} />
+                            <h3 className="text-xl font-medium">Related</h3>
                           </div>
-                        ))}
-                      </div>
-                    </div>
+                          {suggestionsLoading ? (
+                            <div className="flex flex-col space-y-3">
+                              {[1, 2, 3].map((i) => (
+                                <div key={i} className="flex flex-col space-y-3 text-sm">
+                                  <div className="h-px w-full bg-[#1C1C1C]" />
+                                  <div className="flex flex-row justify-between font-medium space-x-2 items-center">
+                                    <div className="bg-[#1C1C1C] rounded h-4 w-3/4 animate-pulse"></div>
+                                    <div className="bg-[#1C1C1C] rounded h-5 w-5 animate-pulse"></div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            message.suggestions && message.suggestions.length > 0 && (
+                              <div className="flex flex-col space-y-3">
+                                {message.suggestions.map((suggestion, i) => (
+                                  <div
+                                    key={i}
+                                    className="flex flex-col space-y-3 text-sm"
+                                  >
+                                    <div className="h-px w-full bg-[#1C1C1C]" />
+                                    <div
+                                      onClick={() => sendMessage(suggestion)}
+                                      className="cursor-pointer flex flex-row justify-between font-medium space-x-2 items-center"
+                                    >
+                                      <p className="hover:text-[#24A0ED] transition duration-200">
+                                        {suggestion}
+                                      </p>
+                                      <Plus size={20} className="text-[#24A0ED]" />
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )
+                          )}
+                        </div>
+                      </>
+                    )}
                   </>
                 )}
             </div>
