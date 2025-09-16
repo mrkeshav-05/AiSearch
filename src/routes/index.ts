@@ -51,7 +51,8 @@ router.use("/videos", videosRouter); // Temporarily disabled
  */
 router.use("/suggestions", suggestionsRouter);
 
-// Note: Web search functionality is handled via WebSocket in websocket/messageHandler.ts
-// No REST endpoints needed for web search due to real-time streaming requirements
+// Note: All search functionality (web, YouTube, Reddit, academic, video, Pinterest) 
+// is handled via WebSocket in websocket/messageHandler.ts for real-time streaming responses
+// No REST endpoints needed for search operations due to streaming requirements
 
 export default router;

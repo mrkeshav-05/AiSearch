@@ -1,7 +1,7 @@
 import { CopyPlus, Globe, Pencil, ScanEye, SwatchBook } from "lucide-react";
 import { Switch } from "./ui/switch";
 import { cn } from "@/lib/utils";
-import { SiYoutube, SiReddit } from "@icons-pack/react-simple-icons";
+import { SiYoutube, SiReddit, SiPinterest } from "@icons-pack/react-simple-icons";
 import { Popover, PopoverPanel, PopoverButton, Transition } from "@headlessui/react";
 import { Fragment } from "react";
 
@@ -59,6 +59,18 @@ const focusModes = [
       />
     ),
   },
+  {
+    key: "pinterestSearch",
+    title: "Pinterest",
+    description: "Search for images and ideas",
+    icon: (
+      <SiPinterest
+        className="h-5 w-auto mr-0.5"
+        onPointerEnter={undefined}
+        onPointerLeave={undefined}
+      />
+    ),
+  }
 ];
 
 export const Focus = ({
