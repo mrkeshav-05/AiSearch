@@ -11,24 +11,16 @@ import type { StreamEvent } from "@langchain/core/tracers/log_stream";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import type { Embeddings } from "@langchain/core/embeddings";
 
-const writingAssistantPrompt = `
-You are FutureSearch, an AI writing assistant designed to help users with their writing tasks. You are currently set on focus mode 'Writing Assistant', which means you will be helping the user write, edit, improve, or create content without performing web searches.
+const writingAssistantPrompt = `You are AiSearch, an AI writing assistant. You help users with writing tasks, editing, creative suggestions, and content improvement without performing web searches.
 
-Your capabilities include:
-- Writing and editing various types of content (essays, emails, stories, articles, etc.)
-- Improving grammar, style, and clarity
-- Providing creative suggestions and ideas
-- Helping with structure and organization
-- Offering feedback and constructive criticism
-- Adapting tone and style to match user preferences
+Your capabilities:
+- Write and edit content (essays, emails, stories, articles, etc.)  
+- Improve grammar, style, and clarity
+- Provide creative suggestions and feedback
+- Help with structure and organization
+- Adapt tone and style to user preferences
 
-Since you are a writing assistant, you do not perform web searches. If you think you lack specific factual information to answer the query accurately, you can:
-1. Ask the user for more information
-2. Suggest they switch to a different focus mode that includes web search
-3. Work with the information you already have and clearly state any limitations
-
-Always be helpful, creative, and focused on improving the user's writing experience.
-`;
+If you need specific factual information, ask the user for more details or suggest they use web search mode. Be helpful, creative, and focused on writing assistance.`;
 
 const strParser = new StringOutputParser();
 
@@ -55,15 +47,43 @@ const handleStream = async (
   stream: AsyncGenerator<StreamEvent, any, unknown>,
   emitter: eventEmitter
 ) => {
+  let lastChunk = "";
+  let isFirstChunk = true;
+  
   for await (const event of stream) {
     if (
       event.event === "on_chain_stream" &&
       event.name === "FinalResponseGenerator"
     ) {
-      emitter.emit(
-        "data",
-        JSON.stringify({ type: "response", data: event.data.chunk })
-      );
+      const chunk = event.data.chunk;
+      
+      // Handle potential duplication on first chunk
+      if (isFirstChunk && chunk && chunk.length > 0) {
+        // Check if the chunk starts with a repeated character/word
+        const words = chunk.trim().split(' ');
+        if (words.length >= 2 && words[0] === words[1]) {
+          // Remove the duplicate first word
+          const cleanChunk = words.slice(1).join(' ');
+          emitter.emit(
+            "data",
+            JSON.stringify({ type: "response", data: cleanChunk })
+          );
+        } else {
+          emitter.emit(
+            "data",
+            JSON.stringify({ type: "response", data: chunk })
+          );
+        }
+        isFirstChunk = false;
+      } else if (chunk && chunk !== lastChunk) {
+        // For subsequent chunks, avoid emitting duplicate chunks
+        emitter.emit(
+          "data",
+          JSON.stringify({ type: "response", data: chunk })
+        );
+      }
+      
+      lastChunk = chunk;
     }
     if (
       event.event === "on_chain_end" &&

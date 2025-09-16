@@ -46,7 +46,7 @@ Rephrased question:
 `;
 
 const basicAcademicSearchResponsePrompt = `
-You are FutureSearch, an AI model who is expert at searching academic sources and answering user's queries. You are set on focus mode 'Academic', this means you will be searching for academic papers, research articles, and scholarly content.
+You are AiSearch, an AI model who is expert at searching academic sources and answering user's queries. You are set on focus mode 'Academic', this means you will be searching for academic papers, research articles, and scholarly content.
 
 Generate a response that is informative and relevant to the user's query based on provided context (the context consists of search results containing academic papers, research articles, and scholarly content).
 

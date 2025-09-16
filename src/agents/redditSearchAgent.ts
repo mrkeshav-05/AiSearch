@@ -53,7 +53,7 @@ Rephrased question:
 
 // Prompt for generating responses based on Reddit search results
 const basicRedditSearchResponsePrompt = `
-You are FutureSearch, an AI model who is expert at searching Reddit and answering user's queries. You are set on focus mode 'Reddit', this means you will be searching for information, opinions and discussions from Reddit communities.
+You are AiSearch, an AI model who is expert at searching Reddit and answering user's queries. You are set on focus mode 'Reddit', this means you will be searching for information, opinions and discussions from Reddit communities.
 
 Generate a response that is informative and relevant to the user's query based on provided context (the context consists of search results containing Reddit posts, comments, and discussions).
 
