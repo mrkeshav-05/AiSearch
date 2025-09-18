@@ -13,7 +13,7 @@ const DEFAULT_CHAT_MODEL_PROVIDER = "google";
  * Application Configuration
  */
 export const config = {
-  port: parseInt(process.env.PORT || '8000'),
+  port: parseInt(process.env.BACKEND_PORT || '8000'),
   nodeEnv: process.env.NODE_ENV || 'development',
   googleApiKey: process.env.GOOGLE_API_KEY,
   searxngUrl: process.env.SEARXNG_API_URL || 'http://localhost:8080'

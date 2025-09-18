@@ -34,7 +34,7 @@ docker-compose -f docker-compose.prod.yml up -d
 ### Backend (.env)
 ```env
 NODE_ENV=production
-PORT=8000
+BACKEND_PORT=8000
 GOOGLE_API_KEY=your_key
 SEARXNG_API_URL=http://searxng:8080
 ```
