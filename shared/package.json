@@ -1,0 +1,24 @@
+{
+  "name": "@aisearch/shared",
+  "version": "1.0.0",
+  "description": "Shared types, constants, and utilities for AiSearch",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  },
+  "keywords": [
+    "shared",
+    "types",
+    "constants",
+    "utilities"
+  ],
+  "author": "AiSearch Team",
+  "license": "MIT"
+}
