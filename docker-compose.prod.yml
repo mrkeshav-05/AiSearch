@@ -1,11 +1,12 @@
-version: '3.8'
-
 services:
   # Backend API Service
   backend:
+    container_name: backend
+    image: backend
     build:
       context: .
       dockerfile: infrastructure/docker/backend.Dockerfile
+      target: production
     ports:
       - "8000:8000"
     environment:
@@ -26,9 +27,12 @@ services:
 
   # Frontend Service
   frontend:
+    container_name: frontend
+    image: frontend
     build:
       context: .
       dockerfile: infrastructure/docker/frontend.Dockerfile
+      target: production
     ports:
       - "3000:3000"
     environment:
@@ -47,7 +51,8 @@ services:
 
   # SearxNG Search Engine
   searxng:
-    image: searxng/searxng:latest
+    container_name: searxng
+    image: searxng
     ports:
       - "8080:8080"
     volumes:
