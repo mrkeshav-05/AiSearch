@@ -75,7 +75,7 @@ const MessageBox = ({
     console.log(message);
     console.log(parsedMessage);
     setParsedMessage(message.content);
-  }, [message]);
+  }, [message, parsedMessage]);
 
   const { speechStatus, start, stop } = useSpeech({ text: speechMessage });
 

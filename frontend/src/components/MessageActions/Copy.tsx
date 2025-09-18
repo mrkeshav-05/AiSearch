@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Message } from "@/components/chat/ChatWindow";
-import { Check, ClipboardList, FilePen, ThumbsDown } from "lucide-react";
+import { Check, ClipboardList } from "lucide-react";
+import { Document } from "@langchain/core/documents";
 
 const Copy = ({
   message,
@@ -18,7 +19,7 @@ const Copy = ({
           message.sources &&
           message.sources.length > 0 &&
           `\n\nCitations:\n${message.sources
-            ?.map((source: any, i: any) => `[${i + 1}] ${source.metadata.url}`)
+            ?.map((source: Document, i: number) => `[${i + 1}] ${source.metadata.url}`)
             .join(`\n`)}`
         }`;
         navigator.clipboard.writeText(contentToCopy);

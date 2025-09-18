@@ -7,6 +7,7 @@ import {
   Transition,
   TransitionChild
   } from "@headlessui/react";
+import Image from 'next/image';
 const MessageSources = ({sources}:{
     sources: Document[];
   }
@@ -37,7 +38,7 @@ const MessageSources = ({sources}:{
           </p>
           <div className="flex flex-row items-center justify-between">
             <div className="flex flex-row items-center space-x-1">
-              <img
+              <Image
                 src={`https://s2.googleusercontent.com/s2/favicons?domain_url=${source.metadata.url}`}
                 width={16}
                 height={16}
@@ -63,7 +64,7 @@ const MessageSources = ({sources}:{
         >
           <div className="flex flex-row items-center space-x-1">
             {sources.slice(3, 6).map((source, i) => (
-              <img
+              <Image
                 src={`https://s2.googleusercontent.com/s2/favicons?domain_url=${source.metadata.url}`}
                 width={16}
                 height={16}
@@ -114,7 +115,7 @@ const MessageSources = ({sources}:{
                         </p>
                         <div className="flex flex-row items-center justify-between">
                           <div className="flex flex-row items-center space-x-1">
-                            <img
+                            <Image
                               src={`https://s2.googleusercontent.com/s2/favicons?domain_url=${source.metadata.url}`}
                               width={16}
                               height={16}

@@ -2,6 +2,7 @@
 // Displays the initial landing screen when no messages exist in the chat
 // Provides entry point for users to start their first search query
 
+import Image from "next/image";
 import EmptyChatMessageInput from "./EmptyChatMessageInput";
 
 /**
@@ -36,7 +37,7 @@ const EmptyChat = ({
     <div className="flex flex-col items-center justify-center min-h-screen max-w-screen mx-auto p-2 space-y-8">
       {/* Welcome message to encourage user interaction */}
       <div className="text-[#24A0ED] text-5xl font-light -mt-8 ">
-        <img
+        <Image
           src="brain2.svg"
           alt="AI Brain Logo"
           className="w-10 h-10 inline-block mr-3 mb-3 "

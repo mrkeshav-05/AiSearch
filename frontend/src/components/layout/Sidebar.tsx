@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  SquareIcon,
   Home,
   Search,
   BookOpenText,
@@ -10,6 +9,7 @@ import {
 import Link from "next/link";
 import { useSelectedLayoutSegments } from "next/navigation";
 import Layout from "./Layout";
+import Image from "next/image";
 const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const segments = useSelectedLayoutSegments();
   const navLinks = [
@@ -36,12 +36,12 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     <div className="bg-red-500">
       <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-20 lg:flex-col">
         <div className="flex grow flex-col items-center justify-between gap-y-5 overflow-y-auto bg-[#111111] px-2 py-8">
-          <a
+          <Link
             href="/"
             title="AI Search - Home"
             className="flex items-center justify-center p-2 rounded-xl transition-all duration-200 group"
           >
-            <img
+            <Image
               src="brain.svg"
               alt="AI Brain Logo"
               className="w-10 h-10 transition-all  brightness-0 invert  "
@@ -56,7 +56,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                 e.currentTarget.style.filter = 'brightness(0) invert(1)';
               }}
             />
-          </a>
+          </Link>
           <div className="flex items-center flex-col gap-y-4 w-full">
             {navLinks.map((link, i) => (
               <Link

@@ -28,7 +28,7 @@ export interface ChatState {
  */
 export interface WebSocketMessage {
   type: "message" | "sources" | "messageEnd" | "error";
-  data?: any;
+  data?: string | Document[] | unknown;
   messageId?: string;
 }
 
