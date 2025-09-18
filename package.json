@@ -1,37 +1,55 @@
 {
   "name": "aisearch",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "AI-powered search application with intelligent agents",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend", 
+    "shared"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node --env-file=.env dist/server.js",
-    "build": "tsc",
-    "dev": "nodemon --env-file=.env src/server.ts"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "@google/generative-ai": "^0.24.0",
-    "@langchain/core": "^0.3.71",
-    "@langchain/google-genai": "^0.1.10",
-    "axios": "^1.8.2",
-    "compute-cosine-similarity": "^1.1.0",
-    "compute-dot": "^1.1.0",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "langchain": "^0.3.19",
-    "ws": "^8.18.1"
+    "dev": "concurrently \"pnpm run dev:backend\" \"pnpm run dev:frontend\"",
+    "dev:backend": "pnpm --filter @aisearch/backend run dev",
+    "dev:frontend": "pnpm --filter @aisearch/frontend run dev",
+    "build": "pnpm run build:shared && pnpm run build:backend && pnpm run build:frontend",
+    "build:shared": "pnpm --filter @aisearch/shared run build",
+    "build:backend": "pnpm --filter @aisearch/backend run build",
+    "build:frontend": "pnpm --filter @aisearch/frontend run build",
+    "start": "concurrently \"pnpm run start:backend\" \"pnpm run start:frontend\"",
+    "start:backend": "pnpm --filter @aisearch/backend run start",
+    "start:frontend": "pnpm --filter @aisearch/frontend run start",
+    "test": "pnpm run test:backend && pnpm run test:frontend",
+    "test:backend": "pnpm --filter @aisearch/backend run test",
+    "test:frontend": "pnpm --filter @aisearch/frontend run test",
+    "lint": "pnpm run lint:backend && pnpm run lint:frontend",
+    "lint:backend": "pnpm --filter @aisearch/backend run lint",
+    "lint:frontend": "pnpm --filter @aisearch/frontend run lint",
+    "clean": "pnpm --filter @aisearch/shared run clean && rm -rf backend/dist && rm -rf frontend/.next",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.0",
-    "@types/node": "^22.13.10",
-    "@types/ws": "^8.18.0",
-    "nodemon": "^3.1.9",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.8.2"
+    "concurrently": "^9.1.0"
+  },
+  "keywords": [
+    "ai",
+    "search", 
+    "nodejs",
+    "nextjs",
+    "typescript",
+    "websocket",
+    "monorepo"
+  ],
+  "author": "AiSearch Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mrkeshav-05/AiSearch.git"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
   }
 }

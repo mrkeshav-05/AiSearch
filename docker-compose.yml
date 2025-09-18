@@ -17,9 +17,17 @@ services:
     image: backend
     build:
       context: .
-      dockerfile: backend.dockerfile
+      dockerfile: infrastructure/docker/backend.Dockerfile
       args:
         - SEARXNG_API_URL=http://searxng:8080
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - NODE_ENV=production
+      - PORT=8000
+      - SEARXNG_BASE_URL=http://searxng:8080
+      - SEARXNG_API_URL=http://searxng:8080
+      - BACKEND_PORT=8000
     depends_on:
         - searxng
     expose:
