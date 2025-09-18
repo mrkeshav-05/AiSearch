@@ -12,8 +12,8 @@ services:
     networks:
       - AiSearch
   
-  aisearch_backend:
-    container_name: aisearch_backend
+  backend:
+    container_name: backend
     image: backend
     build:
       context: .
@@ -23,7 +23,7 @@ services:
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - NODE_ENV=production
+      - NODE_ENV=development
       - PORT=8000
       - SEARXNG_BASE_URL=http://searxng:8080
       - SEARXNG_API_URL=http://searxng:8080
@@ -37,7 +37,25 @@ services:
     networks:
         - AiSearch
 
-
+  frontend:
+    container_name: frontend
+    image: frontend
+    build:
+      context: .
+      dockerfile: infrastructure/docker/frontend.Dockerfile
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_WS_URL=ws://localhost:8000
+      - NEXT_PUBLIC_APP_URL=http://localhost:3000
+    depends_on:
+      - backend
+    expose:
+      - 3000
+    ports:
+      - 3000:3000
+    networks:
+      - AiSearch
 
 networks:
   AiSearch:
