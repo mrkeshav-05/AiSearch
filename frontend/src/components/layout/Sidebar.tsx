@@ -44,7 +44,9 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
             <Image
               src="brain.svg"
               alt="AI Brain Logo"
-              className="w-10 h-10 transition-all  brightness-0 invert  "
+              className="w-10 h-10 transition-all  brightness-0 invert"
+              width={40}
+              height={40}
               style={{
                 filter: 'brightness(0) invert(1)',
                 transition: 'all 0.2s ease-in-out'

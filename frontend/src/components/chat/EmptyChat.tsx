@@ -40,6 +40,8 @@ const EmptyChat = ({
         <Image
           src="brain2.svg"
           alt="AI Brain Logo"
+          width={40}
+          height={40}
           className="w-10 h-10 inline-block mr-3 mb-3 "
         />
         AiSearch

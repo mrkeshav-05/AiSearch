@@ -33,6 +33,8 @@ const outputParser = new ListLineOutputParser({
   key: "suggestions",
 });
 
+import { RunnableLambda } from "@langchain/core/runnables";
+
 const createSuggestionGeneratorChain = (llm: BaseChatModel) => {
   return RunnableSequence.from([
     RunnableMap.from({
@@ -41,7 +43,7 @@ const createSuggestionGeneratorChain = (llm: BaseChatModel) => {
     }),
     PromptTemplate.fromTemplate(suggestionGeneratorPrompt),
     llm,
-    outputParser,
+    RunnableLambda.from((output: string) => outputParser.parse(output)),
   ]);
 };
 
