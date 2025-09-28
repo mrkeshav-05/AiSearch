@@ -7,7 +7,7 @@ set -e
 
 # Configuration
 AWS_REGION="ap-south-1"
-CLUSTER_NAME="aisearch-free-cluster"
+CLUSTER_NAME="aisearch-cluster"
 
 echo "🛑 Stopping AiSearch services to save costs..."
 

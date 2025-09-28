@@ -8,7 +8,7 @@ set -e
 
 # Configuration
 AWS_REGION="ap-south-1"
-CLUSTER_NAME="aisearch-free-cluster"
+CLUSTER_NAME="aisearch-cluster"
 YOUR_ACCOUNT_ID="058264529499"
 
 echo "⚠️  WARNING: This will DELETE ALL AiSearch resources from AWS!"
