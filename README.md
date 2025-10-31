@@ -11,13 +11,13 @@ AiSearch is a modern, intelligent search platform that combines the power of tra
 
 ## ✨ Features
 
-- 🔍 **Intelligent Search**: AI-powered search with contextual understanding
-- 💬 **Real-Time Chat**: WebSocket-based streaming responses
-- 📚 **Source Citations**: Comprehensive source tracking and display
-- 🎯 **Focus Modes**: Specialized search for web, academic, images, videos, and more
-- 🌐 **Privacy-First**: Built on SearXNG for anonymous search
-- 📱 **Responsive Design**: Works seamlessly on desktop and mobile
-- 🐳 **Production Ready**: Full Docker containerization and deployment
+- 🔍 **Smart Search**: AI-enhanced search with context awareness
+- 💬 **Live Chat**: Stream responses via WebSocket technology
+- 📚 **Rich Citations**: Complete source references and attribution
+- 🎯 **Search Modes**: Dedicated modes for web, academic, media, and more
+- 🌐 **Privacy-Focused**: Powered by SearXNG for secure searching
+- 📱 **Adaptive Design**: Optimized for all screen sizes
+- 🐳 **Deploy-Ready**: Full Docker support for production use
 
 ## 🚀 Quick Start
 
