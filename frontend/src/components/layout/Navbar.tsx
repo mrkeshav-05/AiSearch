@@ -52,7 +52,7 @@ const Navbar = ({ messages }: { messages: Message[] }) => {
       <div className="flex flex-row space-x-4 items-center">
         <Share
           size={17}
-          className="active:scale-95 transition duration-100 cursor-pointer"
+          className="active:scale-90 transition duration-100 cursor-pointer"
         />
         <Trash
           size={17}
