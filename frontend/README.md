@@ -452,38 +452,39 @@ docker run -p 3000:3000 frontend
 }
 ```
 
-### Common Issues
-1. **WebSocket Connection Failed**: Check backend server status
-2. **Build Errors**: Verify TypeScript types and imports
-3. **Styling Issues**: Check Tailwind CSS configuration
-4. **Performance Issues**: Use React Profiler
+### Troubleshooting Guide
+1. **WebSocket Connectivity**: Ensure backend server is running
+2. **Build Failures**: Check TypeScript typing and import paths
+3. **Style Problems**: Validate Tailwind configuration
+4. **Speed Issues**: Utilize React Developer Tools Profiler
 
-## 🚀 Performance
+## ⚡ Performance Enhancement
 
-### Optimization Strategies
-- **Code Splitting**: Automatic route-based splitting
-- **Image Optimization**: Next.js Image component
-- **Bundle Analysis**: Regular bundle size monitoring
-- **Caching**: Aggressive caching for static assets
+### Optimization Techniques
+- **Dynamic Code Splitting**: Route-based chunking
+- **Smart Image Handling**: Next.js optimized images
+- **Package Analysis**: Continuous bundle monitoring
+- **Cache Strategy**: Smart static asset caching
 
-### Performance Metrics
-- **First Contentful Paint (FCP)**: < 1.5s
-- **Largest Contentful Paint (LCP)**: < 2.5s
-- **Cumulative Layout Shift (CLS)**: < 0.1
-- **First Input Delay (FID)**: < 100ms
+### Key Performance Indicators
+- **FCP (First Content Paint)**: Target < 1.5s
+- **LCP (Main Content Load)**: Target < 2.5s
+- **CLS (Layout Stability)**: Target < 0.1
+- **FID (Input Response)**: Target < 100ms
 
-## 🔗 Integration
+## 🔌 System Integration
 
-### Backend Communication
-- RESTful API calls for static data
-- WebSocket for real-time features
-- Error handling and retry logic
-- Request/response type safety
+### Backend Interface
+- REST API endpoints for data retrieval
+- WebSocket implementation for live updates
+- Robust error management
+- Type-safe data exchange
 
-### External Services
-- Image optimization service
-- Analytics integration (planned)
-- Error monitoring (planned)
+### Third-party Services
+- Dedicated image processing
+- Usage analytics (future)
+- Error tracking system (future)
+
 
 ## 📚 Resources
 
