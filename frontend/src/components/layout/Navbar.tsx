@@ -51,7 +51,7 @@ const Navbar = ({ messages }: { messages: Message[] }) => {
       <p className="hidden lg:flex">{title}</p>
       <div className="flex flex-row space-x-4 items-center">
         <Share
-          size={17}
+          size={18}
           className="active:scale-90 transition duration-100 cursor-pointer"
         />
         <Trash
