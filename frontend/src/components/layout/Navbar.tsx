@@ -45,7 +45,7 @@ const Navbar = ({ messages }: { messages: Message[] }) => {
         className="active:scale-95 transition duration-100 cursor-pointer lg:hidden"
       />
       <div className="hidden lg:flex flex-row items-center justify-center space-x-2">
-        <Clock size={17} />
+        <Clock size={18} />
         <p className="text-xs">{timeAgo} ago</p>
       </div>
       <p className="hidden lg:flex">{title}</p>
