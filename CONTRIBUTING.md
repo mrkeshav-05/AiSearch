@@ -1,13 +1,13 @@
 # Contributing Guidelines
 
-## Development Setup
+## Development Environment Setup
 
-1. Install dependencies:
+1. Install required packages:
 ```bash
 pnpm install
 ```
 
-2. Start development servers:
+2. Launch development servers:
 ```bash
 # Backend
 pnpm run dev:backend
@@ -16,16 +16,16 @@ pnpm run dev:backend
 pnpm run dev:frontend
 ```
 
-## Code Standards
+## Coding Standards
 
-- Use TypeScript for all new code
-- Follow ESLint configuration
-- Write tests for new features
-- Use conventional commits
+- Utilize TypeScript for all new implementations
+- Adhere to ESLint configuration
+- Create tests for new functionalities
+- Employ conventional commit messages
 
-## Pull Request Process
+## Pull Request Workflow
 
-1. Create feature branch from main
-2. Make changes with tests
-3. Update documentation
-4. Submit PR with clear description
+1. Generate a feature branch from main
+2. Implement changes along with tests
+3. Revise documentation
+4. Submit PR with a detailed description
