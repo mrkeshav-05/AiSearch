@@ -1,4 +1,4 @@
-# 🧠 AiSearch
+# <img width="51" height="46" alt="image" src="https://github.com/user-attachments/assets/31210d3c-01e8-4219-854a-c49dacd899b4" /> AiSearch
 
 **AI-Powered Search Engine with Real-Time Conversations**
 
@@ -22,22 +22,22 @@ AiSearch is a modern, intelligent search platform that combines the power of tra
 ## 📸 Screenshots
 
 ### Main Interface
-![Main Search Interface](docs/screenshots/main-interface.png)
-*AI-powered search with real-time streaming responses*
+<img width="1440" height="809" alt="image" src="https://github.com/user-attachments/assets/1d0df175-3798-4280-baf4-96a6fade00d0" />
+
 
 ### Chat Interface
-![Chat Interface](docs/screenshots/chat-interface.png)
-*Interactive chat with comprehensive source citations*
+<img width="1128" height="650" alt="image" src="https://github.com/user-attachments/assets/7665ba07-d18a-4a9c-8c2d-73ba532b0f0d" />
+
+
 
 ### Search Modes
-![Search Modes](docs/screenshots/search-modes.png)
-*Multiple search modes: Web, Academic, Images, Videos, and more*
+<img width="1070" height="458" alt="image" src="https://github.com/user-attachments/assets/8411ed75-102a-45e2-8a08-1eb5a81a3314" />
 
 ### Mobile View
-![Mobile Responsive](docs/screenshots/mobile-view.png)
-*Fully responsive design optimized for all devices*
+<img width="324" height="693" alt="image" src="https://github.com/user-attachments/assets/ddceb6bd-382f-4416-be71-e1ae49012d51" />
 
-> **Note**: Add your application screenshots in the `docs/screenshots/` directory to showcase the features.
+
+
 
 ## 🚀 Quick Start
 
