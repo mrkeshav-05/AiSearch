@@ -19,6 +19,26 @@ AiSearch is a modern, intelligent search platform that combines the power of tra
 - 📱 **Adaptive Design**: Optimized for all screen sizes
 - 🐳 **Deploy-Ready**: Full Docker support for production use
 
+## 📸 Screenshots
+
+### Main Interface
+![Main Search Interface](docs/screenshots/main-interface.png)
+*AI-powered search with real-time streaming responses*
+
+### Chat Interface
+![Chat Interface](docs/screenshots/chat-interface.png)
+*Interactive chat with comprehensive source citations*
+
+### Search Modes
+![Search Modes](docs/screenshots/search-modes.png)
+*Multiple search modes: Web, Academic, Images, Videos, and more*
+
+### Mobile View
+![Mobile Responsive](docs/screenshots/mobile-view.png)
+*Fully responsive design optimized for all devices*
+
+> **Note**: Add your application screenshots in the `docs/screenshots/` directory to showcase the features.
+
 ## 🚀 Quick Start
 
 ### One-Command Setup
