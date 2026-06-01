@@ -18,6 +18,7 @@ import eventEmitter from "events";
 import type { StreamEvent } from "@langchain/core/tracers/log_stream";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import type { Embeddings } from "@langchain/core/embeddings";
+import { isQuotaExceededError, fallbackAcademicSearch, isQuotaCurrentlyExhausted } from "./fallbackHandler";
 
 const basicAcademicSearchRetrieverPrompt = `
 You will be given a conversation below and a follow up question. You need to rephrase the follow-up question if needed so it is a standalone question that can be used by the LLM to search academic sources for information.
@@ -318,6 +319,16 @@ const basicAcademicSearch = (
 ) => {
   const emitter = new eventEmitter();
 
+  // Check if quota is already known to be exhausted - skip AI immediately
+  if (isQuotaCurrentlyExhausted()) {
+    console.log('[AcademicSearch] Quota known to be exhausted, using fallback immediately');
+    const fallbackEmitter = fallbackAcademicSearch(query);
+    fallbackEmitter.on("data", (data) => emitter.emit("data", data));
+    fallbackEmitter.on("end", () => emitter.emit("end"));
+    fallbackEmitter.on("error", (error) => emitter.emit("error", error));
+    return emitter;
+  }
+
   try {
     const basicAcademicSearchAnsweringChain =
       createBasicAcademicSearchAnsweringChain(llm, embeddings);
@@ -331,12 +342,39 @@ const basicAcademicSearch = (
       }
     );
 
-    handleStream(stream, emitter);
-  } catch (err) {
-    emitter.emit(
-      "error",
-      JSON.stringify({ data: "An error has occurred please try again later" })
-    );
+    handleStream(stream, emitter).catch((err: any) => {
+      // Check if this is a quota exceeded error
+      if (isQuotaExceededError(err)) {
+        console.log('[AcademicSearch] AI quota exceeded, falling back to direct SearXNG search');
+        const fallbackEmitter = fallbackAcademicSearch(query);
+        
+        // Forward all events from fallback emitter
+        fallbackEmitter.on("data", (data) => emitter.emit("data", data));
+        fallbackEmitter.on("end", () => emitter.emit("end"));
+        fallbackEmitter.on("error", (error) => emitter.emit("error", error));
+      } else {
+        emitter.emit(
+          "error",
+          JSON.stringify({ data: "An error has occurred please try again later" })
+        );
+      }
+    });
+  } catch (err: any) {
+    // Check if this is a quota exceeded error
+    if (isQuotaExceededError(err)) {
+      console.log('[AcademicSearch] AI quota exceeded, falling back to direct SearXNG search');
+      const fallbackEmitter = fallbackAcademicSearch(query);
+      
+      // Forward all events from fallback emitter
+      fallbackEmitter.on("data", (data) => emitter.emit("data", data));
+      fallbackEmitter.on("end", () => emitter.emit("end"));
+      fallbackEmitter.on("error", (error) => emitter.emit("error", error));
+    } else {
+      emitter.emit(
+        "error",
+        JSON.stringify({ data: "An error has occurred please try again later" })
+      );
+    }
     console.error("Academic search error:", err);
   }
 

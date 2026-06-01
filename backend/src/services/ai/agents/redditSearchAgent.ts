@@ -21,6 +21,7 @@ import eventEmitter from "events";
 import type { StreamEvent } from "@langchain/core/tracers/log_stream";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import type { Embeddings } from "@langchain/core/embeddings";
+import { isQuotaExceededError, fallbackRedditSearch, isQuotaCurrentlyExhausted } from "./fallbackHandler";
 
 // Prompt for rephrasing user queries to optimize Reddit search
 const basicRedditSearchRetrieverPrompt = `
@@ -293,6 +294,16 @@ const basicRedditSearch = (
 ) => {
   const emitter = new eventEmitter();
 
+  // Check if quota is already known to be exhausted - skip AI immediately
+  if (isQuotaCurrentlyExhausted()) {
+    console.log('[RedditSearch] Quota known to be exhausted, using fallback immediately');
+    const fallbackEmitter = fallbackRedditSearch(query);
+    fallbackEmitter.on("data", (data) => emitter.emit("data", data));
+    fallbackEmitter.on("end", () => emitter.emit("end"));
+    fallbackEmitter.on("error", (error) => emitter.emit("error", error));
+    return emitter;
+  }
+
   try {
     console.log("[REDDIT AGENT] Starting Reddit search for:", query);
     
@@ -309,13 +320,40 @@ const basicRedditSearch = (
       }
     );
 
-    handleStream(stream, emitter);
-  } catch (err) {
+    handleStream(stream, emitter).catch((err: any) => {
+      // Check if this is a quota exceeded error
+      if (isQuotaExceededError(err)) {
+        console.log('[RedditSearch] AI quota exceeded, falling back to direct SearXNG search');
+        const fallbackEmitter = fallbackRedditSearch(query);
+        
+        // Forward all events from fallback emitter
+        fallbackEmitter.on("data", (data) => emitter.emit("data", data));
+        fallbackEmitter.on("end", () => emitter.emit("end"));
+        fallbackEmitter.on("error", (error) => emitter.emit("error", error));
+      } else {
+        emitter.emit(
+          "error",
+          JSON.stringify({ data: "An error has occurred please try again later" })
+        );
+      }
+    });
+  } catch (err: any) {
     console.error("[REDDIT AGENT] Error:", err);
-    emitter.emit(
-      "error",
-      JSON.stringify({ data: "An error has occurred please try again later" })
-    );
+    // Check if this is a quota exceeded error
+    if (isQuotaExceededError(err)) {
+      console.log('[RedditSearch] AI quota exceeded, falling back to direct SearXNG search');
+      const fallbackEmitter = fallbackRedditSearch(query);
+      
+      // Forward all events from fallback emitter
+      fallbackEmitter.on("data", (data) => emitter.emit("data", data));
+      fallbackEmitter.on("end", () => emitter.emit("end"));
+      fallbackEmitter.on("error", (error) => emitter.emit("error", error));
+    } else {
+      emitter.emit(
+        "error",
+        JSON.stringify({ data: "An error has occurred please try again later" })
+      );
+    }
   }
 
   return emitter;

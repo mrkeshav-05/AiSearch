@@ -44,6 +44,7 @@ import eventEmitter from "events";
 import type { StreamEvent } from "@langchain/core/tracers/log_stream";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import type { Embeddings } from "@langchain/core/embeddings";
+import { isQuotaExceededError, fallbackYouTubeSearch, isQuotaCurrentlyExhausted } from "./fallbackHandler";
 
 /**
  * Enhanced YouTube Search Query Processor
@@ -446,6 +447,16 @@ const basicYoutubeSearch = (
 ) => {
   const emitter = new eventEmitter();
 
+  // Check if quota is already known to be exhausted - skip AI immediately
+  if (isQuotaCurrentlyExhausted()) {
+    console.log('[YouTubeSearch] Quota known to be exhausted, using fallback immediately');
+    const fallbackEmitter = fallbackYouTubeSearch(query);
+    fallbackEmitter.on("data", (data) => emitter.emit("data", data));
+    fallbackEmitter.on("end", () => emitter.emit("end"));
+    fallbackEmitter.on("error", (error) => emitter.emit("error", error));
+    return emitter;
+  }
+
   try {
     // Input validation and optimization for Gemini
     if (!query || query.trim().length === 0) {
@@ -476,15 +487,44 @@ const basicYoutubeSearch = (
       }
     );
 
-    handleStream(stream, emitter);
-  } catch (err) {
+    handleStream(stream, emitter).catch((err: any) => {
+      // Check if this is a quota exceeded error
+      if (isQuotaExceededError(err)) {
+        console.log('[YouTubeSearch] AI quota exceeded, falling back to direct SearXNG search');
+        const fallbackEmitter = fallbackYouTubeSearch(optimizedQuery);
+        
+        // Forward all events from fallback emitter
+        fallbackEmitter.on("data", (data) => emitter.emit("data", data));
+        fallbackEmitter.on("end", () => emitter.emit("end"));
+        fallbackEmitter.on("error", (error) => emitter.emit("error", error));
+      } else {
+        emitter.emit(
+          "error",
+          JSON.stringify({ 
+            data: "I encountered an issue while searching YouTube. Please try rephrasing your question or try again in a moment." 
+          })
+        );
+      }
+    });
+  } catch (err: any) {
     console.error("❌ YouTube Search Error:", err);
-    emitter.emit(
-      "error",
-      JSON.stringify({ 
-        data: "I encountered an issue while searching YouTube. Please try rephrasing your question or try again in a moment." 
-      })
-    );
+    // Check if this is a quota exceeded error
+    if (isQuotaExceededError(err)) {
+      console.log('[YouTubeSearch] AI quota exceeded, falling back to direct SearXNG search');
+      const fallbackEmitter = fallbackYouTubeSearch(query);
+      
+      // Forward all events from fallback emitter
+      fallbackEmitter.on("data", (data) => emitter.emit("data", data));
+      fallbackEmitter.on("end", () => emitter.emit("end"));
+      fallbackEmitter.on("error", (error) => emitter.emit("error", error));
+    } else {
+      emitter.emit(
+        "error",
+        JSON.stringify({ 
+          data: "I encountered an issue while searching YouTube. Please try rephrasing your question or try again in a moment." 
+        })
+      );
+    }
   }
 
   return emitter;

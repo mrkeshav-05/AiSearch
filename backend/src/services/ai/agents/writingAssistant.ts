@@ -10,6 +10,7 @@ import eventEmitter from "events";
 import type { StreamEvent } from "@langchain/core/tracers/log_stream";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import type { Embeddings } from "@langchain/core/embeddings";
+import { isQuotaExceededError, fallbackWritingAssistant, isQuotaCurrentlyExhausted } from "./fallbackHandler";
 
 const writingAssistantPrompt = `You are AiSearch, an AI writing assistant. You help users with writing tasks, editing, creative suggestions, and content improvement without performing web searches.
 
@@ -102,6 +103,16 @@ const handleWritingAssistant = (
 ) => {
   const emitter = new eventEmitter();
 
+  // Check if quota is already known to be exhausted - skip AI immediately
+  if (isQuotaCurrentlyExhausted()) {
+    console.log('[WritingAssistant] Quota known to be exhausted, using fallback immediately');
+    const fallbackEmitter = fallbackWritingAssistant(query);
+    fallbackEmitter.on("data", (data) => emitter.emit("data", data));
+    fallbackEmitter.on("end", () => emitter.emit("end"));
+    fallbackEmitter.on("error", (error) => emitter.emit("error", error));
+    return emitter;
+  }
+
   try {
     const writingAssistantChain = createWritingAssistantChain(llm);
     
@@ -116,18 +127,40 @@ const handleWritingAssistant = (
     );
 
     // Handle the stream asynchronously
-    handleStream(stream, emitter).catch((err) => {
+    handleStream(stream, emitter).catch((err: any) => {
       console.error("Stream handling error:", err);
+      // Check if this is a quota exceeded error
+      if (isQuotaExceededError(err)) {
+        console.log('[WritingAssistant] AI quota exceeded, showing fallback message');
+        const fallbackEmitter = fallbackWritingAssistant(query);
+        
+        // Forward all events from fallback emitter
+        fallbackEmitter.on("data", (data) => emitter.emit("data", data));
+        fallbackEmitter.on("end", () => emitter.emit("end"));
+        fallbackEmitter.on("error", (error) => emitter.emit("error", error));
+      } else {
+        emitter.emit(
+          "error",
+          JSON.stringify({ data: "An error occurred while processing your request" })
+        );
+      }
+    });
+  } catch (err: any) {
+    // Check if this is a quota exceeded error
+    if (isQuotaExceededError(err)) {
+      console.log('[WritingAssistant] AI quota exceeded, showing fallback message');
+      const fallbackEmitter = fallbackWritingAssistant(query);
+      
+      // Forward all events from fallback emitter
+      fallbackEmitter.on("data", (data) => emitter.emit("data", data));
+      fallbackEmitter.on("end", () => emitter.emit("end"));
+      fallbackEmitter.on("error", (error) => emitter.emit("error", error));
+    } else {
       emitter.emit(
         "error",
-        JSON.stringify({ data: "An error occurred while processing your request" })
+        JSON.stringify({ data: "An error has occurred please try again later" })
       );
-    });
-  } catch (err) {
-    emitter.emit(
-      "error",
-      JSON.stringify({ data: "An error has occurred please try again later" })
-    );
+    }
     console.error("Writing Assistant Error:", err);
   }
 
