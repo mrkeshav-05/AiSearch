@@ -4,7 +4,6 @@ import {
   Home,
   Search,
   BookOpenText,
-  CircleAlert,
   LogIn,
   LogOut,
   User,
@@ -14,6 +13,7 @@ import {
   PanelLeftOpen,
   PanelLeftClose,
   MessageSquare,
+  Globe,
   Trash2,
   Plus,
   Menu,
@@ -27,52 +27,83 @@ import { useChatHistory } from "@/context/ChatHistoryContext";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 
-// ── Profile dropdown ─────────────────────────────────────────────────────────
+// ── Profile dropdown (viewport-aware, animated) ───────────────────────────────
 function ProfileMenu({
   user,
-  anchorRef,
+  anchorEl,
   onClose,
   onLogout,
 }: {
   user: { name: string; email: string; avatar_url: string | null };
-  anchorRef: React.RefObject<HTMLButtonElement | null>;
+  anchorEl: HTMLButtonElement | null;
   onClose: () => void;
   onLogout: () => void;
 }) {
   const router = useRouter();
   const menuRef = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
+  const [visible, setVisible] = useState(false);
 
+  // Compute viewport-safe position after first paint (so we know menu dimensions)
   useEffect(() => {
-    if (anchorRef.current) {
-      const rect = anchorRef.current.getBoundingClientRect();
-      setPos({
-        top: rect.top,
-        left: rect.right + 8,
-      });
-    }
-  }, [anchorRef]);
+    if (!anchorEl || !menuRef.current) return;
+    const anchor = anchorEl.getBoundingClientRect();
+    const menuW = menuRef.current.offsetWidth || 224;
+    const menuH = menuRef.current.offsetHeight || 240;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const GAP = 8;
 
+    // Default: open to the right of the anchor
+    let left = anchor.right + GAP;
+    let top = anchor.top;
+
+    // Overflows right → open to the left of the anchor
+    if (left + menuW > vw - GAP) {
+      left = anchor.left - menuW - GAP;
+    }
+    // Still overflows left → clamp to screen edge
+    if (left < GAP) left = GAP;
+
+    // Overflows bottom → shift up
+    if (top + menuH > vh - GAP) {
+      top = Math.max(GAP, vh - menuH - GAP);
+    }
+    if (top < GAP) top = GAP;
+
+    setCoords({ top, left });
+    // Trigger entrance animation on next frame
+    requestAnimationFrame(() => setVisible(true));
+  }, [anchorEl]);
+
+  // Close on outside click (but NOT when clicking the anchor itself — let toggle handle it)
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (
         menuRef.current &&
         !menuRef.current.contains(e.target as Node) &&
-        anchorRef.current &&
-        !anchorRef.current.contains(e.target as Node)
+        anchorEl &&
+        !anchorEl.contains(e.target as Node)
       ) {
         onClose();
       }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [onClose, anchorRef]);
+  }, [onClose, anchorEl]);
 
   const menu = (
     <div
       ref={menuRef}
-      style={{ position: "fixed", top: pos.top, left: pos.left, zIndex: 9999 }}
-      className="w-56 rounded-2xl border border-[#2C2C2C] bg-[#1A1A1A] shadow-2xl py-1 overflow-hidden"
+      style={{
+        position: "fixed",
+        top: coords ? coords.top : -9999,
+        left: coords ? coords.left : -9999,
+        zIndex: 9999,
+      }}
+      className={`w-56 rounded-2xl border border-[#2C2C2C] bg-[#1A1A1A] shadow-2xl py-1 overflow-hidden
+        transition-all duration-150 origin-bottom-left
+        ${visible && coords ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 translate-y-1"}`}
     >
       {/* User info */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-[#2C2C2C]">
@@ -136,31 +167,107 @@ function HistoryPanel({
   onSelectSession: (id: string) => void;
 }) {
   const { sessions, deleteSession, clearAll, currentSessionId } = useChatHistory();
+  const router = useRouter();
 
   const formatDate = (iso: string) => {
     const d = new Date(iso);
     const now = new Date();
-    const diff = now.getTime() - d.getTime();
-    const days = Math.floor(diff / 86400000);
+    const days = Math.floor((now.getTime() - d.getTime()) / 86400000);
     if (days === 0) return "Today";
     if (days === 1) return "Yesterday";
     if (days < 7) return `${days} days ago`;
     return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
   };
 
-  // Group sessions by date label
-  const groups: Record<string, typeof sessions> = {};
-  for (const s of sessions) {
-    const label = formatDate(s.createdAt);
-    if (!groups[label]) groups[label] = [];
-    groups[label].push(s);
+  const aiSessions = sessions.filter((s) => s.source !== "search");
+  const searchSessions = sessions.filter((s) => s.source === "search");
+
+  // Group an array of sessions by date
+  function groupByDate(list: typeof sessions) {
+    const groups: Record<string, typeof sessions> = {};
+    for (const s of list) {
+      const label = formatDate(s.createdAt);
+      if (!groups[label]) groups[label] = [];
+      groups[label].push(s);
+    }
+    return groups;
+  }
+
+  function SessionItem({ session }: { session: typeof sessions[0] }) {
+    const isSearch = session.source === "search";
+    return (
+      <div
+        className={`group flex items-center gap-2 px-4 py-2 cursor-pointer transition-colors ${
+          session.id === currentSessionId
+            ? "bg-[#24A0ED]/10 text-white"
+            : "text-white/60 hover:bg-white/5 hover:text-white"
+        }`}
+        onClick={() => {
+          if (isSearch) {
+            // Re-open the discover page with the original query
+            const userMsg = session.messages.find((m) => m.role === "user");
+            if (userMsg) router.push(`/discover?q=${encodeURIComponent(userMsg.content)}`);
+          } else {
+            onSelectSession(session.id);
+          }
+        }}
+      >
+        {isSearch
+          ? <Globe size={13} className="shrink-0 opacity-60 text-emerald-400" />
+          : <MessageSquare size={13} className="shrink-0 opacity-60" />
+        }
+        <span className="flex-1 text-xs truncate">{session.title}</span>
+        <button
+          onClick={(e) => { e.stopPropagation(); deleteSession(session.id); }}
+          className="opacity-0 group-hover:opacity-100 text-white/30 hover:text-red-400 transition-all"
+          title="Delete"
+        >
+          <Trash2 size={12} />
+        </button>
+      </div>
+    );
+  }
+
+  function SourceGroup({
+    label,
+    icon,
+    items,
+    accent,
+  }: {
+    label: string;
+    icon: React.ReactNode;
+    items: typeof sessions;
+    accent: string;
+  }) {
+    const [collapsed, setCollapsed] = useState(false);
+    if (items.length === 0) return null;
+    const groups = groupByDate(items);
+    return (
+      <div>
+        {/* Source header */}
+        <button
+          onClick={() => setCollapsed((c) => !c)}
+          className={`flex w-full items-center gap-2 px-4 py-2 text-[10px] font-semibold uppercase tracking-widest ${accent} hover:text-white transition-colors`}
+        >
+          {icon}
+          {label}
+          <ChevronRight size={10} className={`ml-auto transition-transform ${collapsed ? "" : "rotate-90"}`} />
+        </button>
+        {!collapsed && Object.entries(groups).map(([dateLabel, group]) => (
+          <div key={dateLabel}>
+            <p className="px-4 py-0.5 text-[10px] text-white/20 tracking-wide">{dateLabel}</p>
+            {group.map((s) => <SessionItem key={s.id} session={s} />)}
+          </div>
+        ))}
+      </div>
+    );
   }
 
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-[#1C1C1C]">
-        <h2 className="text-sm font-semibold text-white">Chat History</h2>
+        <h2 className="text-sm font-semibold text-white">History</h2>
         <button
           onClick={onNewChat}
           title="New chat"
@@ -172,39 +279,27 @@ function HistoryPanel({
       </div>
 
       {/* Sessions list */}
-      <div className="flex-1 overflow-y-auto py-2 space-y-4 scrollbar-thin scrollbar-thumb-white/10">
+      <div className="flex-1 overflow-y-auto py-2 scrollbar-thin scrollbar-thumb-white/10">
         {sessions.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 gap-2 text-white/30">
             <MessageSquare size={28} />
             <p className="text-xs">No history yet</p>
           </div>
         ) : (
-          Object.entries(groups).map(([label, items]) => (
-            <div key={label}>
-              <p className="px-4 py-1 text-[10px] font-semibold uppercase tracking-widest text-white/30">{label}</p>
-              {items.map((session) => (
-                <div
-                  key={session.id}
-                  className={`group flex items-center gap-2 px-4 py-2 cursor-pointer transition-colors ${
-                    session.id === currentSessionId
-                      ? "bg-[#24A0ED]/10 text-white"
-                      : "text-white/60 hover:bg-white/5 hover:text-white"
-                  }`}
-                  onClick={() => onSelectSession(session.id)}
-                >
-                  <MessageSquare size={13} className="shrink-0 opacity-60" />
-                  <span className="flex-1 text-xs truncate">{session.title}</span>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); deleteSession(session.id); }}
-                    className="opacity-0 group-hover:opacity-100 text-white/30 hover:text-red-400 transition-all"
-                    title="Delete"
-                  >
-                    <Trash2 size={12} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          ))
+          <div className="space-y-2">
+            <SourceGroup
+              label="AI Chat"
+              icon={<MessageSquare size={10} />}
+              items={aiSessions}
+              accent="text-[#24A0ED]/70"
+            />
+            <SourceGroup
+              label="Web Search"
+              icon={<Globe size={10} />}
+              items={searchSessions}
+              accent="text-emerald-400/70"
+            />
+          </div>
         )}
       </div>
 
@@ -236,11 +331,19 @@ const Sidebar = ({
   const segments = useSelectedLayoutSegments();
   const { user, logout } = useAuth();
   const [panelOpen, setPanelOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileAnchorEl, setProfileAnchorEl] = useState<HTMLButtonElement | null>(null);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
-  const avatarButtonRef = useRef<HTMLButtonElement>(null);
-  const mobileAvatarButtonRef = useRef<HTMLButtonElement>(null);
+
+  const profileOpen = profileAnchorEl !== null;
+
+  // Toggle: clicking the same button again closes the menu
+  function toggleProfile(el: HTMLButtonElement) {
+    setProfileAnchorEl((prev) => (prev === el ? null : el));
+  }
+  function closeProfile() {
+    setProfileAnchorEl(null);
+  }
 
   useEffect(() => {
     const check = () => setIsDesktop(window.innerWidth >= 1024);
@@ -261,7 +364,7 @@ const Sidebar = ({
 
   const navLinks = [
     { icon: Home, href: "/", active: segments.length === 0, label: "Home" },
-    { icon: Search, href: "/", active: segments.includes("discover"), label: "Discover" },
+    { icon: Search, href: "/discover", active: segments.includes("discover"), label: "Discover" },
     { icon: BookOpenText, href: "/", active: segments.includes("library"), label: "Library" },
   ];
 
@@ -327,23 +430,24 @@ const Sidebar = ({
             ))}
           </div>
 
-          {/* Bottom: CircleAlert + profile */}
+          {/* Bottom: Help + profile */}
           <div className="flex flex-col items-center gap-3 relative">
             <Link
               href="/"
               title="Info"
               className="text-white/50 hover:text-[#24A0ED] transition-colors"
             >
-              <CircleAlert size={20} />
+              <HelpCircle size={20} />
             </Link>
 
             {user ? (
               <div className="relative">
                 <button
-                  ref={avatarButtonRef}
-                  onClick={() => setProfileOpen((o) => !o)}
+                  onClick={(e) => toggleProfile(e.currentTarget)}
                   title="Account"
-                  className="w-9 h-9 rounded-full bg-[#24A0ED] flex items-center justify-center text-white text-xs font-bold ring-2 ring-transparent hover:ring-[#24A0ED]/50 transition-all overflow-hidden"
+                  className={`w-9 h-9 rounded-full bg-[#24A0ED] flex items-center justify-center text-white text-xs font-bold ring-2 transition-all overflow-hidden ${
+                    profileOpen ? "ring-[#24A0ED]/70" : "ring-transparent hover:ring-[#24A0ED]/50"
+                  }`}
                 >
                   {user.avatar_url ? (
                     <Image
@@ -360,8 +464,8 @@ const Sidebar = ({
                 {profileOpen && (
                   <ProfileMenu
                     user={user}
-                    anchorRef={avatarButtonRef}
-                    onClose={() => setProfileOpen(false)}
+                    anchorEl={profileAnchorEl}
+                    onClose={closeProfile}
                     onLogout={logout}
                   />
                 )}
@@ -406,9 +510,10 @@ const Sidebar = ({
         <span className="text-sm font-semibold text-[#24A0ED]">AiSearch</span>
         {user ? (
           <button
-            ref={mobileAvatarButtonRef}
-            onClick={() => setProfileOpen((o) => !o)}
-            className="w-8 h-8 rounded-full bg-[#24A0ED] flex items-center justify-center text-white text-xs font-bold overflow-hidden"
+            onClick={(e) => toggleProfile(e.currentTarget)}
+            className={`w-8 h-8 rounded-full bg-[#24A0ED] flex items-center justify-center text-white text-xs font-bold overflow-hidden ring-2 transition-all ${
+              profileOpen ? "ring-[#24A0ED]/70" : "ring-transparent"
+            }`}
           >
             {user.avatar_url ? (
               <Image src={user.avatar_url} alt={user.name} width={32} height={32} className="rounded-full" />
@@ -424,8 +529,8 @@ const Sidebar = ({
         {profileOpen && (
           <ProfileMenu
             user={user!}
-            anchorRef={mobileAvatarButtonRef}
-            onClose={() => setProfileOpen(false)}
+            anchorEl={profileAnchorEl}
+            onClose={closeProfile}
             onLogout={logout}
           />
         )}
@@ -449,11 +554,12 @@ const Sidebar = ({
         ))}
         {user ? (
           <button
-            ref={mobileAvatarButtonRef}
-            onClick={() => setProfileOpen((o) => !o)}
+            onClick={(e) => toggleProfile(e.currentTarget)}
             className="relative flex flex-col items-center space-y-1 flex-1 text-white/60"
           >
-            <div className="w-6 h-6 rounded-full bg-[#24A0ED] flex items-center justify-center text-white text-[10px] font-bold">
+            <div className={`w-6 h-6 rounded-full bg-[#24A0ED] flex items-center justify-center text-white text-[10px] font-bold ring-2 transition-all ${
+              profileOpen ? "ring-[#24A0ED]/70" : "ring-transparent"
+            }`}>
               {user.name.charAt(0).toUpperCase()}
             </div>
             <span className="text-[10px]">Profile</span>

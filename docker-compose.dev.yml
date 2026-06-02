@@ -1,7 +1,7 @@
 services:
   postgres:
     container_name: postgres
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: aisearch
       POSTGRES_PASSWORD: aisearch
@@ -36,6 +36,7 @@ services:
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - NODE_ENV=development
       - PORT=8000
       - SEARXNG_BASE_URL=http://searxng:8080
@@ -47,10 +48,18 @@ services:
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
       - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI:-http://localhost:8000/api/v1/auth/google/callback}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      # RAG configuration
+      - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-gemini}
+      - LLM_PROVIDER=${LLM_PROVIDER:-gemini}
+      - EMBEDDING_DIM=${EMBEDDING_DIM:-768}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - UPLOAD_DIR=/app/uploads
+      - MAX_UPLOAD_BYTES=${MAX_UPLOAD_BYTES:-52428800}
     volumes:
       # Mount source so nodemon picks up changes instantly
       - ./backend/src:/app/backend/src
       - ./shared/src:/app/shared/src
+      - uploads_data:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -92,3 +101,4 @@ networks:
 
 volumes:
   postgres_data:
+  uploads_data:

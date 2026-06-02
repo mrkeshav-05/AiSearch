@@ -12,9 +12,9 @@ chatRoutes.get('/sessions', async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
     const { rows } = await query<{
-      id: string; title: string; created_at: string; updated_at: string;
+      id: string; title: string; source: string; created_at: string; updated_at: string;
     }>(
-      `SELECT id, title, created_at, updated_at
+      `SELECT id, title, source, created_at, updated_at
        FROM chat_sessions
        WHERE user_id = $1
        ORDER BY updated_at DESC
@@ -34,8 +34,8 @@ chatRoutes.get('/sessions/:id', async (req: AuthRequest, res: Response) => {
     const userId = req.user!.id;
     const { id } = req.params;
 
-    const { rows: sessions } = await query<{ id: string; title: string; created_at: string }>(
-      'SELECT id, title, created_at FROM chat_sessions WHERE id = $1 AND user_id = $2',
+    const { rows: sessions } = await query<{ id: string; title: string; source: string; created_at: string }>(
+      'SELECT id, title, source, created_at FROM chat_sessions WHERE id = $1 AND user_id = $2',
       [id, userId]
     );
     if (sessions.length === 0) {
@@ -62,8 +62,9 @@ chatRoutes.put('/sessions/:id', async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
     const { id } = req.params;
-    const { title, messages } = req.body as {
+    const { title, messages, source } = req.body as {
       title: string;
+      source?: 'ai' | 'search';
       messages: { id: string; role: 'user' | 'assistant'; content: string; createdAt: string }[];
     };
 
@@ -72,13 +73,15 @@ chatRoutes.put('/sessions/:id', async (req: AuthRequest, res: Response) => {
       return;
     }
 
+    const sessionSource = source === 'search' ? 'search' : 'ai';
+
     // Upsert the session
     await query(
-      `INSERT INTO chat_sessions (id, user_id, title, created_at, updated_at)
-       VALUES ($1, $2, $3, NOW(), NOW())
+      `INSERT INTO chat_sessions (id, user_id, title, source, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, NOW(), NOW())
        ON CONFLICT (id) DO UPDATE
-         SET title = EXCLUDED.title, updated_at = NOW()`,
-      [id, userId, title]
+         SET title = EXCLUDED.title, source = EXCLUDED.source, updated_at = NOW()`,
+      [id, userId, title, sessionSource]
     );
 
     // Replace all messages for this session

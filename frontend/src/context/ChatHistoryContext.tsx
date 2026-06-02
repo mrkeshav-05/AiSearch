@@ -14,6 +14,7 @@ export interface StoredMessage {
 export interface ChatSession {
   id: string;
   title: string;
+  source: "ai" | "search";
   createdAt: string;
   messages: StoredMessage[];
 }
@@ -22,7 +23,7 @@ interface ChatHistoryContextValue {
   sessions: ChatSession[];
   currentSessionId: string | null;
   setCurrentSessionId: (id: string | null) => void;
-  saveSession: (id: string, messages: { id: string; content: string; role: "user" | "assistant"; createdAt: Date }[]) => void;
+  saveSession: (id: string, messages: { id: string; content: string; role: "user" | "assistant"; createdAt: Date }[], source?: "ai" | "search") => void;
   deleteSession: (id: string) => void;
   clearAll: () => void;
   getSession: (id: string) => ChatSession | undefined;
@@ -63,9 +64,10 @@ export function ChatHistoryProvider({ children }: { children: React.ReactNode })
         if (!json) return;
         // Sessions from list API don't include messages — store with empty messages
         // We lazy-load messages when a session is selected
-        const loaded: ChatSession[] = json.data.sessions.map((s: { id: string; title: string; created_at: string }) => ({
+        const loaded: ChatSession[] = json.data.sessions.map((s: { id: string; title: string; source: string; created_at: string }) => ({
           id: s.id,
           title: s.title,
+          source: (s.source === 'search' ? 'search' : 'ai') as 'ai' | 'search',
           createdAt: s.created_at,
           messages: [],
         }));
@@ -75,7 +77,7 @@ export function ChatHistoryProvider({ children }: { children: React.ReactNode })
   }, []);
 
   const saveSession = useCallback(
-    (id: string, messages: { id: string; content: string; role: "user" | "assistant"; createdAt: Date }[]) => {
+    (id: string, messages: { id: string; content: string; role: "user" | "assistant"; createdAt: Date }[], source: "ai" | "search" = "ai") => {
       if (messages.length === 0) return;
       const title = buildTitle(messages);
       const stored: StoredMessage[] = messages.map((m) => ({
@@ -89,9 +91,9 @@ export function ChatHistoryProvider({ children }: { children: React.ReactNode })
       setSessions((prev) => {
         const existing = prev.find((s) => s.id === id);
         if (existing) {
-          return prev.map((s) => s.id === id ? { ...s, title, messages: stored } : s);
+          return prev.map((s) => s.id === id ? { ...s, title, source, messages: stored } : s);
         }
-        const newSession: ChatSession = { id, title, createdAt: new Date().toISOString(), messages: stored };
+        const newSession: ChatSession = { id, title, source, createdAt: new Date().toISOString(), messages: stored };
         return [newSession, ...prev].slice(0, 50);
       });
 
@@ -104,7 +106,7 @@ export function ChatHistoryProvider({ children }: { children: React.ReactNode })
           await fetch(`${BACKEND_URL}/api/v1/chat/sessions/${id}`, {
             method: "PUT",
             headers: authHeaders(),
-            body: JSON.stringify({ title, messages: stored }),
+            body: JSON.stringify({ title, source, messages: stored }),
           });
         } catch { /* offline – skip */ }
       }, 300);

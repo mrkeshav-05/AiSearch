@@ -6,9 +6,12 @@ import imagesRouter from './routes/images.routes';
 import videosRouter from './routes/videos.routes';
 import { authRoutes } from './routes/auth.routes';
 import { chatRoutes } from './routes/chat.routes';
+import documentsRouter from './routes/documents.routes';
+import ragChatRouter from './routes/ragChat.routes';
+
 /**
  * API v1 Router
- * 
+ *
  * Main router for version 1 of the API
  */
 export const apiV1Router: Router = Router();
@@ -21,5 +24,7 @@ apiV1Router.use('/suggestions', suggestionRoutes);
 apiV1Router.use('/health', healthRoutes);
 apiV1Router.use('/images', imagesRouter);
 apiV1Router.use('/videos', videosRouter);
+apiV1Router.use('/documents', documentsRouter);
+apiV1Router.use('/rag', ragChatRouter);
 
 export default apiV1Router;
