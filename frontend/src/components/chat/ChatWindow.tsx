@@ -6,6 +6,8 @@ import EmptyChat from "./EmptyChat";
 import Chat from "./Chat";
 import { getSuggestions } from "@/lib/actions";
 import Navbar from "../layout/Navbar";
+import { useChatHistory } from "@/context/ChatHistoryContext";
+import { useChatSession } from "@/context/ChatSessionContext";
 export type Message = {
   id: string;
   createdAt: Date;
@@ -41,6 +43,12 @@ const useSocket = (url: string) => {
 // In this component, we are connecting to the websocket and sending messages
 const ChatWindow = () => {
   const ws = useSocket(process.env.NEXT_PUBLIC_WS_URL!);
+  const { saveSession, setCurrentSessionId } = useChatHistory();
+  const { activeSession, sessionKey } = useChatSession();
+
+  // Stable session ID — regenerated when sessionKey changes (new chat / history load)
+  const sessionIdRef = useRef<string>(crypto.randomUUID());
+
   const [chatHistory, setChatHistory] = useState<[string, string][]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const messagesRef = useRef<Message[]>([]);
@@ -49,10 +57,45 @@ const ChatWindow = () => {
   const [focusMode, setFocusMode] = useState("webSearch");
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
+  // When sessionKey changes, reset state (new chat or session loaded)
+  useEffect(() => {
+    sessionIdRef.current = crypto.randomUUID();
+    if (activeSession) {
+      sessionIdRef.current = activeSession.id;
+      const restored: Message[] = activeSession.messages.map((m) => ({
+        id: m.id,
+        content: m.content,
+        role: m.role,
+        createdAt: new Date(m.createdAt),
+      }));
+      const restoredHistory: [string, string][] = [];
+      for (let i = 0; i < restored.length - 1; i += 2) {
+        if (restored[i].role === "user" && restored[i + 1]?.role === "assistant") {
+          restoredHistory.push(["human", restored[i].content], ["assistant", restored[i + 1].content]);
+        }
+      }
+      setMessages(restored);
+      setChatHistory(restoredHistory);
+    } else {
+      setMessages([]);
+      setChatHistory([]);
+    }
+    setCurrentSessionId(sessionIdRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionKey]);
+
+  // Persist messages to history on every change
   useEffect(() => {
     messagesRef.current = messages;
-    // console.log(messages)
-  }, [messages]);
+    if (messages.length > 0) {
+      saveSession(sessionIdRef.current, messages.map((m) => ({
+        id: m.id,
+        content: m.content,
+        role: m.role,
+        createdAt: m.createdAt,
+      })));
+    }
+  }, [messages, saveSession]);
 
   const sendMessage = (message: string) => {
     if (loading) return;

@@ -5,6 +5,7 @@ import { healthRoutes } from './routes/health.routes';
 import imagesRouter from './routes/images.routes';
 import videosRouter from './routes/videos.routes';
 import { authRoutes } from './routes/auth.routes';
+import { chatRoutes } from './routes/chat.routes';
 /**
  * API v1 Router
  * 
@@ -14,6 +15,7 @@ export const apiV1Router: Router = Router();
 
 // Mount routes
 apiV1Router.use('/auth', authRoutes);
+apiV1Router.use('/chat', chatRoutes);
 apiV1Router.use('/search', searchRoutes);
 apiV1Router.use('/suggestions', suggestionRoutes);
 apiV1Router.use('/health', healthRoutes);

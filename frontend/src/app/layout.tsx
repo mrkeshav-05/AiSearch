@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import SideBar from "@/components/layout/Sidebar";
 import { AuthProvider } from "@/context/AuthContext";
+import { ChatHistoryProvider } from "@/context/ChatHistoryContext";
+import { ChatSessionProvider } from "@/context/ChatSessionContext";
+import AppShell from "@/components/layout/AppShell";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -34,9 +36,13 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased h-full`}
       >
         <AuthProvider>
-          <SideBar>
-            {children}
-          </SideBar>
+          <ChatHistoryProvider>
+            <ChatSessionProvider>
+              <AppShell>
+                {children}
+              </AppShell>
+            </ChatSessionProvider>
+          </ChatHistoryProvider>
         </AuthProvider>
       </body>
     </html>
