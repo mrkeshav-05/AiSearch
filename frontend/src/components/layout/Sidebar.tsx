@@ -5,13 +5,17 @@ import {
   Search,
   BookOpenText,
   CircleAlert,
+  LogIn,
+  LogOut,
 } from "lucide-react";
 import Link from "next/link";
 import { useSelectedLayoutSegments } from "next/navigation";
 import Layout from "./Layout";
 import Image from "next/image";
+import { useAuth } from "@/context/AuthContext";
 const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const segments = useSelectedLayoutSegments();
+  const { user, logout } = useAuth();
   const navLinks = [
     {
       icon: Home,
@@ -82,6 +86,40 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
           >
             <CircleAlert className="text-white hover:text-[#24A0ED]" />
           </Link>
+
+          {/* Auth section */}
+          {user ? (
+            <div className="flex flex-col items-center gap-2">
+              {user.avatar_url ? (
+                <Image
+                  src={user.avatar_url}
+                  alt={user.name}
+                  width={32}
+                  height={32}
+                  className="rounded-full ring-2 ring-[#24A0ED]"
+                  title={user.name}
+                />
+              ) : (
+                <div
+                  title={user.name}
+                  className="w-8 h-8 rounded-full bg-[#24A0ED] flex items-center justify-center text-white text-xs font-bold"
+                >
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <button
+                onClick={logout}
+                title="Sign out"
+                className="text-white/50 hover:text-red-400 transition-colors"
+              >
+                <LogOut size={16} />
+              </button>
+            </div>
+          ) : (
+            <Link href="/login" title="Sign in" className="text-white/50 hover:text-[#24A0ED] transition-colors">
+              <LogIn size={20} />
+            </Link>
+          )}
         </div>
       </div>
       <div className="fixed bottom-0 flex flex-row w-full z-50 items-center gap-x-6 bg-[#111111] px-4 py-4 shadow-sm lg:hidden">
@@ -100,6 +138,18 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
             <span className="text-xm">{link.label}</span>
           </Link>
         ))}
+        {/* Mobile auth */}
+        {user ? (
+          <button onClick={logout} className="flex flex-col items-center space-y-1 text-white/50 hover:text-red-400">
+            <LogOut size={20} />
+            <span className="text-xs">Sign out</span>
+          </button>
+        ) : (
+          <Link href="/login" className="flex flex-col items-center space-y-1 text-white/50 hover:text-[#24A0ED]">
+            <LogIn size={20} />
+            <span className="text-xs">Sign in</span>
+          </Link>
+        )}
       </div>
       <Layout>{children}</Layout>
     </div>

@@ -3,6 +3,7 @@ import http from 'http';
 import { createApp } from './app';
 import { startWebSocketServer } from './services/websocket';
 import { config } from './config';
+import { initDB } from './db/database';
 
 /**
  * Main Server Entry Point
@@ -11,6 +12,9 @@ import { config } from './config';
  */
 const startServer = async () => {
   try {
+    // Initialize database schema
+    await initDB();
+
     // Create Express app
     const app = createApp();
     

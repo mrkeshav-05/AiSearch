@@ -1,4 +1,23 @@
 services:
+  postgres:
+    container_name: postgres
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: aisearch
+      POSTGRES_PASSWORD: aisearch
+      POSTGRES_DB: aisearch
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+    networks:
+      - AiSearch
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aisearch"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   searxng:
     container_name: searxng
     image: searxng
@@ -28,8 +47,15 @@ services:
       - SEARXNG_BASE_URL=http://searxng:8080
       - SEARXNG_API_URL=http://searxng:8080
       - BACKEND_PORT=8000
+      - DATABASE_URL=postgresql://aisearch:aisearch@postgres:5432/aisearch
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI:-http://localhost:8000/api/v1/auth/google/callback}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
     depends_on:
         - searxng
+        - postgres
     expose:
         - 8000
     ports:
@@ -60,3 +86,6 @@ services:
 networks:
   AiSearch:
     driver: bridge
+
+volumes:
+  postgres_data:
