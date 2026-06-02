@@ -4,7 +4,7 @@
   "description": "AiSearch backend API server",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "nodemon src/index.ts",
+    "dev": "nodemon",
     "build": "tsc",
     "start": "node dist/index.js",
     "test": "jest",

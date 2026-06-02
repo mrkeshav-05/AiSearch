@@ -16,6 +16,8 @@ import {
   MessageSquare,
   Trash2,
   Plus,
+  Menu,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSelectedLayoutSegments } from "next/navigation";
@@ -235,8 +237,17 @@ const Sidebar = ({
   const { user, logout } = useAuth();
   const [panelOpen, setPanelOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
   const avatarButtonRef = useRef<HTMLButtonElement>(null);
   const mobileAvatarButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const check = () => setIsDesktop(window.innerWidth >= 1024);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   const handleNewChat = useCallback(() => {
     onNewChat?.();
@@ -383,6 +394,43 @@ const Sidebar = ({
         </div>
       </div>
 
+      {/* ── Mobile top bar (hamburger top-left) ── */}
+      <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 bg-[#111111] border-b border-[#1C1C1C] lg:hidden">
+        <button
+          onClick={() => setMobileDrawerOpen(true)}
+          className="text-white/60 hover:text-[#24A0ED] transition-colors"
+          title="Chat history"
+        >
+          <Menu size={22} />
+        </button>
+        <span className="text-sm font-semibold text-[#24A0ED]">AiSearch</span>
+        {user ? (
+          <button
+            ref={mobileAvatarButtonRef}
+            onClick={() => setProfileOpen((o) => !o)}
+            className="w-8 h-8 rounded-full bg-[#24A0ED] flex items-center justify-center text-white text-xs font-bold overflow-hidden"
+          >
+            {user.avatar_url ? (
+              <Image src={user.avatar_url} alt={user.name} width={32} height={32} className="rounded-full" />
+            ) : (
+              user.name.charAt(0).toUpperCase()
+            )}
+          </button>
+        ) : (
+          <Link href="/login" className="text-white/60 hover:text-[#24A0ED] transition-colors">
+            <LogIn size={20} />
+          </Link>
+        )}
+        {profileOpen && (
+          <ProfileMenu
+            user={user!}
+            anchorRef={mobileAvatarButtonRef}
+            onClose={() => setProfileOpen(false)}
+            onLogout={logout}
+          />
+        )}
+      </div>
+
       {/* ── Mobile bottom bar ── */}
       <div className="fixed bottom-0 flex flex-row w-full z-50 items-center gap-x-6 bg-[#111111] px-4 py-4 shadow-sm lg:hidden border-t border-[#1C1C1C]">
         {navLinks.map((link, i) => (
@@ -409,14 +457,6 @@ const Sidebar = ({
               {user.name.charAt(0).toUpperCase()}
             </div>
             <span className="text-[10px]">Profile</span>
-            {profileOpen && (
-              <ProfileMenu
-                user={user}
-                anchorRef={mobileAvatarButtonRef}
-                onClose={() => setProfileOpen(false)}
-                onLogout={logout}
-              />
-            )}
           </button>
         ) : (
           <Link href="/login" className="flex flex-col items-center space-y-1 flex-1 text-white/60 hover:text-[#24A0ED]">
@@ -426,10 +466,41 @@ const Sidebar = ({
         )}
       </div>
 
+      {/* ── Mobile history drawer ── */}
+      {mobileDrawerOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-[60] bg-black/60 lg:hidden"
+            onClick={() => setMobileDrawerOpen(false)}
+          />
+          {/* Drawer panel */}
+          <div className="fixed inset-y-0 left-0 z-[70] w-72 bg-[#0F0F0F] border-r border-[#1C1C1C] flex flex-col lg:hidden">
+            <div className="flex items-center justify-between px-4 py-4 border-b border-[#1C1C1C]">
+              <span className="text-sm font-semibold text-white">Chat History</span>
+              <button
+                onClick={() => setMobileDrawerOpen(false)}
+                className="text-white/50 hover:text-white transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <HistoryPanel
+                onNewChat={() => { handleNewChat(); setMobileDrawerOpen(false); }}
+                onSelectSession={(id) => { handleSelectSession(id); setMobileDrawerOpen(false); }}
+              />
+            </div>
+          </div>
+        </>
+      )}
+
       {/* ── Main content ── */}
       <main
-        className="bg-[#0A0A0A] min-h-screen pb-20 lg:pb-0 transition-all duration-300"
-        style={{ paddingLeft: `${RAIL_W + (panelOpen ? PANEL_W : 0)}px` }}
+        className="bg-[#0A0A0A] min-h-screen pb-20 pt-14 lg:pt-0 lg:pb-0 transition-all duration-300"
+        style={{
+          paddingLeft: isDesktop ? `${RAIL_W + (panelOpen ? PANEL_W : 0)}px` : 0,
+        }}
       >
         <div className="max-w-screen-lg mx-auto px-4">{children}</div>
       </main>

@@ -5,47 +5,47 @@
 import Image from "next/image";
 import EmptyChatMessageInput from "./EmptyChatMessageInput";
 
-/**
- * Empty chat screen component shown when conversation is empty
- *
- * @param sendMessage - Function to send user message to backend
- * @param focusMode - Current search mode (webSearch, imageSearch, etc.)
- * @param setFocusMode - Function to change search mode
- *
- * Features:
- * - Welcome message to guide users
- * - Input field for first query
- * - Focus mode selector for different search types
- * - Centered layout for optimal user experience
- *
- * Visual Design:
- * - Full screen centered layout
- * - Subtle text color for welcome message
- * - Spacious design with proper spacing
- * - Responsive padding and margins
- */
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  if (h < 21) return "Good evening";
+  return "Good night";
+}
+
 const EmptyChat = ({
   sendMessage,
   focusMode,
   setFocusMode,
+  userName,
 }: {
   sendMessage: (message: string) => void;
   focusMode: string;
   setFocusMode: (mode: string) => void;
+  userName?: string;
 }) => {
+  const firstName = userName ? userName.split(" ")[0] : null;
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen max-w-screen mx-auto p-2 space-y-8">
-      {/* Welcome message to encourage user interaction */}
-      <div className="text-[#24A0ED] text-5xl font-light -mt-8 ">
+    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-7rem)] lg:min-h-screen max-w-screen-md mx-auto px-4 py-8 space-y-6">
+      {/* Logo */}
+      <div className="text-[#24A0ED] text-5xl font-light -mt-8">
         <Image
           src="brain2.svg"
           alt="AI Brain Logo"
           width={40}
           height={40}
-          className="w-10 h-10 inline-block mr-3 mb-3 "
+          className="w-10 h-10 inline-block mr-3 mb-3"
         />
         AiSearch
       </div>
+
+      {/* Personalised greeting */}
+      {firstName && (
+        <p className="text-2xl font-serif italic font-medium text-white/80 -mt-2">
+          {getGreeting()}, {firstName}
+        </p>
+      )}
 
       {/* Input component for first message with focus mode selection */}
       <EmptyChatMessageInput

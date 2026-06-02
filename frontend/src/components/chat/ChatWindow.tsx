@@ -8,6 +8,7 @@ import { getSuggestions } from "@/lib/actions";
 import Navbar from "../layout/Navbar";
 import { useChatHistory } from "@/context/ChatHistoryContext";
 import { useChatSession } from "@/context/ChatSessionContext";
+import { useAuth } from "@/context/AuthContext";
 export type Message = {
   id: string;
   createdAt: Date;
@@ -45,6 +46,7 @@ const ChatWindow = () => {
   const ws = useSocket(process.env.NEXT_PUBLIC_WS_URL!);
   const { saveSession, setCurrentSessionId } = useChatHistory();
   const { activeSession, sessionKey } = useChatSession();
+  const { user } = useAuth();
 
   // Stable session ID — regenerated when sessionKey changes (new chat / history load)
   const sessionIdRef = useRef<string>(crypto.randomUUID());
@@ -242,6 +244,7 @@ const ChatWindow = () => {
           sendMessage={sendMessage}
           focusMode={focusMode}
           setFocusMode={setFocusMode}
+          userName={user?.name}
         />
       )}
     </div>
