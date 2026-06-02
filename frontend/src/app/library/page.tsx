@@ -14,6 +14,8 @@ type Panel = 'documents' | 'chat';
 type SortBy = 'recent' | 'name' | 'size';
 type FilterBy = 'all' | 'indexed' | 'processing' | 'failed';
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+
 function authHeaders(): HeadersInit {
   const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
   return token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
@@ -45,7 +47,7 @@ export default function KnowledgeBasePage() {
 
   const fetchDocuments = useCallback(async () => {
     try {
-      const res = await fetch('/api/v1/documents', { headers: authHeaders() });
+      const res = await fetch(`${BACKEND_URL}/api/v1/documents`, { headers: authHeaders() });
       const data = await res.json() as { documents?: Document[] };
       const docs = data.documents ?? [];
       setDocuments(docs);
@@ -108,13 +110,13 @@ export default function KnowledgeBasePage() {
   }
 
   async function deleteDocument(id: string) {
-    await fetch(`/api/v1/documents/${id}`, { method: 'DELETE', headers: authHeaders() });
+    await fetch(`${BACKEND_URL}/api/v1/documents/${id}`, { method: 'DELETE', headers: authHeaders() });
     setSelectedDocIds((prev) => { const n = new Set(prev); n.delete(id); return n; });
     void fetchDocuments();
   }
 
   async function reindexDocument(id: string) {
-    await fetch(`/api/v1/documents/${id}/reindex`, { method: 'POST', headers: authHeaders() });
+    await fetch(`${BACKEND_URL}/api/v1/documents/${id}/reindex`, { method: 'POST', headers: authHeaders() });
     void fetchDocuments();
   }
 
@@ -122,7 +124,7 @@ export default function KnowledgeBasePage() {
     if (selectedDocIds.size === 0) return;
     setStartingChat(true);
     try {
-      const res = await fetch('/api/v1/rag/sessions', {
+      const res = await fetch(`${BACKEND_URL}/api/v1/rag/sessions`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify({ documentIds: [...selectedDocIds] }),

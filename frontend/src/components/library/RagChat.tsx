@@ -10,6 +10,8 @@ interface RagChatProps {
   sessionId: string;
 }
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+
 function parseSse(raw: string) {
   const lines = raw.split('\n');
   for (const line of lines) {
@@ -34,7 +36,7 @@ export default function RagChat({ sessionId }: RagChatProps) {
   // Load history on mount
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
-    fetch(`/api/v1/rag/sessions/${sessionId}/messages`, {
+    fetch(`${BACKEND_URL}/api/v1/rag/sessions/${sessionId}/messages`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
       .then((r) => r.json())
@@ -75,7 +77,7 @@ export default function RagChat({ sessionId }: RagChatProps) {
 
     try {
       const token = localStorage.getItem('auth_token');
-      const res = await fetch(`/api/v1/rag/sessions/${sessionId}/chat`, {
+      const res = await fetch(`${BACKEND_URL}/api/v1/rag/sessions/${sessionId}/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

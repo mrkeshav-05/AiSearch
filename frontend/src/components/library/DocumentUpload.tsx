@@ -8,6 +8,8 @@ interface DocumentUploadProps {
   onUploaded: () => void;
 }
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+
 export default function DocumentUpload({ onUploaded }: DocumentUploadProps) {
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -41,7 +43,7 @@ export default function DocumentUpload({ onUploaded }: DocumentUploadProps) {
         return;
       }
 
-      const res = await fetch('/api/v1/documents/upload', {
+      const res = await fetch(`${BACKEND_URL}/api/v1/documents/upload`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: form,
