@@ -45,3 +45,15 @@ export type SseCitationsEvent = { type: 'citations'; citations: Citation[] };
 export type SseDoneEvent = { type: 'done' };
 export type SseErrorEvent = { type: 'error'; error: string };
 export type SseEvent = SseChunkEvent | SseCitationsEvent | SseDoneEvent | SseErrorEvent;
+
+// Stats for dashboard
+export interface KnowledgeBaseStats {
+  totalDocuments: number;
+  indexedDocuments: number;
+  processingDocuments: number;
+  failedDocuments: number;
+  totalChats: number;
+  totalChunks: number;
+  totalSize: number;
+}
+

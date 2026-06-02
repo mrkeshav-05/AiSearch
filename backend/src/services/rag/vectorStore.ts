@@ -23,40 +23,54 @@ export async function upsertChunks(
   chunks: TextChunk[],
   chunkIds: string[]
 ): Promise<void> {
-  const embeddingProvider = getEmbeddingProvider();
+  try {
+    const embeddingProvider = getEmbeddingProvider();
+    console.log(`[VectorStore] Using embedding provider: ${embeddingProvider.name}, dimension: ${embeddingProvider.dimension}`);
 
-  // Delete existing chunks (embeddings cascade via DB FK)
-  await pool.query('DELETE FROM document_chunks WHERE document_id = $1', [documentId]);
+    // Delete existing chunks (embeddings cascade via DB FK)
+    await pool.query('DELETE FROM document_chunks WHERE document_id = $1', [documentId]);
 
-  const BATCH = 20;
-  for (let start = 0; start < chunks.length; start += BATCH) {
-    const batch = chunks.slice(start, start + BATCH);
-    const batchIds = chunkIds.slice(start, start + BATCH);
+    const BATCH = 20;
+    for (let start = 0; start < chunks.length; start += BATCH) {
+      const batch = chunks.slice(start, start + BATCH);
+      const batchIds = chunkIds.slice(start, start + BATCH);
 
-    // Embed the batch
-    const embeddings = await embeddingProvider.embedBatch(batch.map((c) => c.content));
+      console.log(`[VectorStore] Embedding batch ${Math.floor(start / BATCH) + 1} (${batch.length} chunks)...`);
+      // Embed the batch
+      const embeddings = await embeddingProvider.embedBatch(batch.map((c) => c.content));
+      console.log(`[VectorStore] Got ${embeddings.length} embeddings, first embedding dim: ${embeddings[0]?.length}`);
 
-    for (let i = 0; i < batch.length; i++) {
-      const chunk = batch[i];
-      const id = batchIds[i];
-      const embedding = embeddings[i];
+      for (let i = 0; i < batch.length; i++) {
+        const chunk = batch[i];
+        const id = batchIds[i];
+        const embedding = embeddings[i];
 
-      // Vector literal that pgvector understands: '[0.1,0.2,...]'
-      const vectorLiteral = `[${embedding.join(',')}]`;
+        if (!embedding || embedding.length === 0) {
+          throw new Error(`Embedding ${i} is empty or null`);
+        }
 
-      await pool.query(
-        `INSERT INTO document_chunks
-           (id, document_id, user_id, content, chunk_index, page_number, token_count, embedding)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8::vector)
-         ON CONFLICT (id) DO UPDATE
-           SET content     = EXCLUDED.content,
-               chunk_index = EXCLUDED.chunk_index,
-               page_number = EXCLUDED.page_number,
-               token_count = EXCLUDED.token_count,
-               embedding   = EXCLUDED.embedding`,
-        [id, documentId, userId, chunk.content, chunk.chunkIndex, chunk.pageNumber, chunk.tokenCount, vectorLiteral]
-      );
+        // Vector literal that pgvector understands: '[0.1,0.2,...]'
+        const vectorLiteral = `[${embedding.join(',')}]`;
+
+        await pool.query(
+          `INSERT INTO document_chunks
+             (id, document_id, user_id, content, chunk_index, page_number, token_count, embedding)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8::vector)
+           ON CONFLICT (id) DO UPDATE
+             SET content     = EXCLUDED.content,
+                 chunk_index = EXCLUDED.chunk_index,
+                 page_number = EXCLUDED.page_number,
+                 token_count = EXCLUDED.token_count,
+                 embedding   = EXCLUDED.embedding`,
+          [id, documentId, userId, chunk.content, chunk.chunkIndex, chunk.pageNumber, chunk.tokenCount, vectorLiteral]
+        );
+      }
+      console.log(`[VectorStore] Persisted batch ${Math.floor(start / BATCH) + 1}`);
     }
+    console.log(`[VectorStore] ✓ All chunks embedded and stored`);
+  } catch (err) {
+    console.error(`[VectorStore] ✗ Error in upsertChunks:`, err);
+    throw err;
   }
 }
 

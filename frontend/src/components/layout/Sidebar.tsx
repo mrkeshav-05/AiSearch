@@ -365,7 +365,7 @@ const Sidebar = ({
   const navLinks = [
     { icon: Home, href: "/", active: segments.length === 0, label: "Home" },
     { icon: Search, href: "/discover", active: segments.includes("discover"), label: "Discover" },
-    { icon: BookOpenText, href: "/", active: segments.includes("library"), label: "Library" },
+    { icon: BookOpenText, href: "/library", active: segments.includes("library"), label: "Library" },
   ];
 
   const RAIL_W = 64;   // px — the icon rail

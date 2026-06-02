@@ -5,7 +5,7 @@ import { requireAuth, AuthRequest } from '../middleware/auth.middleware';
 import { ragAnswerStream } from '../../../services/rag/ragPipeline';
 import type { ChatMessage } from '../../../services/rag/providers/llm.interface';
 
-const router = Router();
+const router: ReturnType<typeof Router> = Router();
 
 // ── POST /sessions ────────────────────────────────────────────────────────────
 router.post('/sessions', requireAuth, async (req: Request, res: Response): Promise<void> => {

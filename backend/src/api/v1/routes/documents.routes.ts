@@ -7,7 +7,7 @@ import { pool } from '../../../db/database';
 import { requireAuth, AuthRequest } from '../middleware/auth.middleware';
 import { indexingQueue } from '../../../services/rag/indexingQueue';
 
-const router = Router();
+const router: ReturnType<typeof Router> = Router();
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || '/tmp/uploads';
 const MAX_BYTES = parseInt(process.env.MAX_UPLOAD_BYTES || '52428800', 10); // 50 MB
@@ -33,10 +33,11 @@ const upload = multer({
 router.post(
   '/upload',
   requireAuth,
-  (req: Request, res: Response, next: NextFunction) => {
+  (req: Request, res: Response, next: NextFunction): void => {
     upload.single('file')(req, res, (err) => {
       if (err instanceof multer.MulterError || err) {
-        return res.status(400).json({ error: err.message });
+        res.status(400).json({ error: err.message });
+        return;
       }
       next();
     });

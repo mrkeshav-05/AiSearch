@@ -307,7 +307,7 @@ function DiscoverInner() {
     setError(null);
     saveRecent(q);
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("auth_token");
       const res = await fetch(
         `${API_BASE}/api/v1/search/web?q=${encodeURIComponent(q)}&category=${cat}&page=${pg}`,
         { headers: token ? { Authorization: `Bearer ${token}` } : {} }

@@ -52,19 +52,27 @@ class IndexingQueue extends EventEmitter {
     );
 
     try {
+      console.log(`[IndexingQueue] Starting indexing for doc ${documentId} from ${filePath}`);
+
       // ── 2. Parse PDF ──────────────────────────────────────────────────────
+      console.log(`[IndexingQueue] Parsing PDF...`);
       const { text, pageCount, pageOffsets } = await parsePDF(filePath);
 
       if (!text.trim()) throw new Error('PDF contains no extractable text');
+      console.log(`[IndexingQueue] PDF parsed: ${pageCount} pages, ${text.length} chars`);
 
       // ── 3. Chunk ──────────────────────────────────────────────────────────
+      console.log(`[IndexingQueue] Chunking text...`);
       const chunks = chunkText(text, pageOffsets);
+      console.log(`[IndexingQueue] Created ${chunks.length} chunks`);
 
       // ── 4. Generate stable chunk IDs ─────────────────────────────────────
       const chunkIds = chunks.map(() => randomUUID());
 
       // ── 5. Embed + persist ────────────────────────────────────────────────
+      console.log(`[IndexingQueue] Embedding and persisting chunks...`);
       await upsertChunks(documentId, userId, chunks, chunkIds);
+      console.log(`[IndexingQueue] Chunks embedded and stored`);
 
       // ── 6. Mark indexed ───────────────────────────────────────────────────
       await pool.query(
@@ -75,15 +83,15 @@ class IndexingQueue extends EventEmitter {
       );
 
       this.emit('indexed', { documentId, chunkCount: chunks.length });
-      console.log(`[IndexingQueue] Indexed doc ${documentId}: ${chunks.length} chunks`);
+      console.log(`[IndexingQueue] ✓ Indexed doc ${documentId}: ${chunks.length} chunks`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[IndexingQueue] ✗ Failed doc ${documentId}:`, msg, err);
       await pool.query(
         `UPDATE documents SET status = 'failed', error_msg = $2, updated_at = NOW() WHERE id = $1`,
         [documentId, msg]
       );
       this.emit('failed', { documentId, error: msg });
-      console.error(`[IndexingQueue] Failed doc ${documentId}:`, msg);
     }
   }
 }
