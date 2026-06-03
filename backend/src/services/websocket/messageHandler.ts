@@ -1,12 +1,12 @@
 // WebSocket Message Handler - Processes real-time messages from frontend clients
 // Handles different focus modes (webSearch, imageSearch) and routes to appropriate agents
 
-// LangChain imports for message processing and AI model integration
+// LangChain imports for message processing
 import { AIMessage, BaseMessage, HumanMessage } from "@langchain/core/messages";
 import { WebSocket } from "ws";
-import { ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import type { Embeddings } from "@langchain/core/embeddings";
+import { createLLM, getEmbeddingsInstance } from "../../config";
 import handleWebSearch from "../ai/agents/webSearchAgent";
 import handleYouTubeSearch from "../ai/agents/youtubeSearchAgent";
 import handleRedditSearch from "../ai/agents/redditSearchAgent";
@@ -15,18 +15,11 @@ import handleVideoSearch from "../ai/agents/videoSearchAgent";
 import handleWritingAssistant from "../ai/agents/writingAssistant";
 import basicPinterestSearch from "../ai/agents/pinterestSearchAgent";
 
-// Initialize Google Gemini LLM for AI response generation
-// Temperature 0.7 provides balanced creativity vs consistency
-const llm = new ChatGoogleGenerativeAI({
-  modelName: "gemini-2.0-flash", // Latest Gemini model for optimal performance
-  temperature: 0.7, // Balanced creativity level
-}) as BaseChatModel;
+// Instantiate the active LLM and embeddings using the central factory.
+// Provider selection is automatic: OpenAI → Grok → Google Gemini.
+const llm: BaseChatModel = createLLM();
+const embeddings: Embeddings = getEmbeddingsInstance();
 
-// Initialize Google embeddings for semantic similarity computation
-// Used for document reranking and relevance scoring
-const embeddings = new GoogleGenerativeAIEmbeddings({
-  modelName: "text-embedding-004", // Latest embedding model
-}) as Embeddings;
 
 /**
  * Message structure received from frontend via WebSocket

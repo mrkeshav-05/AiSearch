@@ -2,8 +2,9 @@ import 'dotenv/config';
 import http from 'http';
 import { createApp } from './app';
 import { startWebSocketServer } from './services/websocket';
-import { config } from './config';
+import { config, logProviderInfo } from './config';
 import { initDB } from './db/database';
+
 
 /**
  * Main Server Entry Point
@@ -30,7 +31,9 @@ const startServer = async () => {
       console.log(`🚀 AiSearch backend server started on port ${port}`);
       console.log(`📊 Health check: http://localhost:${port}/health`);
       console.log(`🔗 WebSocket: ws://localhost:${port}`);
+      logProviderInfo();
     });
+
 
     // Graceful shutdown
     process.on('SIGTERM', () => {

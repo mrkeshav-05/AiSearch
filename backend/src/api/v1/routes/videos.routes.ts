@@ -3,24 +3,18 @@
 // Enhanced with proper error handling, validation, and multiple endpoints
 
 import express, { Router } from 'express';
-import { ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
 import { HumanMessage, AIMessage, BaseMessage } from "@langchain/core/messages";
 import handleVideoSearch from "../../../services/ai/agents/videoSearchAgent";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import type { Embeddings } from "@langchain/core/embeddings";
+import { createLLM, getEmbeddingsInstance } from "../../../config";
 
 const router: Router = express.Router();
 
-// Initialize Google Gemini LLM for video content analysis
-const llm = new ChatGoogleGenerativeAI({
-  modelName: "gemini-2.0-flash",
-  temperature: 0.7,
-}) as BaseChatModel;
+// Initialise using the central factory (OpenAI → Grok → Google Gemini)
+const llm: BaseChatModel = createLLM();
+const embeddings: Embeddings = getEmbeddingsInstance();
 
-// Initialize Google embeddings for semantic similarity
-const embeddings = new GoogleGenerativeAIEmbeddings({
-  modelName: "text-embedding-004",
-}) as Embeddings;
 
 /**
  * Input validation helper

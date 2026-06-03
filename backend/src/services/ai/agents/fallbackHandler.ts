@@ -50,8 +50,9 @@ export const markQuotaExhausted = (): void => {
 };
 
 /**
- * Quick API health check - tests if Gemini API is available
- * Returns false immediately if quota is exhausted
+ * Quick API health check - tests if the active AI API is available
+ * Checks Grok (xAI) when GROK_API_KEY is set, otherwise checks Google Gemini.
+ * Returns false immediately if quota is exhausted.
  */
 export const checkApiHealth = async (): Promise<boolean> => {
   // If we already know quota is exhausted, skip the check
@@ -59,33 +60,66 @@ export const checkApiHealth = async (): Promise<boolean> => {
     console.log('[FALLBACK] Skipping API health check - quota known to be exhausted');
     return false;
   }
-  
+
+  // Prefer Grok health check when key is available
+  const grokApiKey = process.env.GROK_API_KEY;
+  if (grokApiKey) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      const response = await fetch(
+        'https://api.x.ai/v1/models',
+        {
+          signal: controller.signal,
+          headers: {
+            'Authorization': `Bearer ${grokApiKey}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      clearTimeout(timeoutId);
+
+      if (response.status === 429) {
+        markQuotaExhausted();
+        return false;
+      }
+
+      return response.ok;
+    } catch (error) {
+      console.log('[FALLBACK] Grok API health check failed:', error);
+      return false;
+    }
+  }
+
+  // Fall back to Google Gemini health check
   const apiKey = process.env.GOOGLE_API_KEY;
   if (!apiKey) {
     console.log('[FALLBACK] No API key configured');
     return false;
   }
-  
+
   try {
     // Quick lightweight check - just list models (minimal quota impact)
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-    
+
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
-      { 
+      {
         signal: controller.signal,
         headers: { 'Content-Type': 'application/json' }
       }
     );
-    
+
     clearTimeout(timeoutId);
-    
+
     if (response.status === 429) {
       markQuotaExhausted();
       return false;
     }
-    
+
     return response.ok;
   } catch (error) {
     console.log('[FALLBACK] API health check failed:', error);

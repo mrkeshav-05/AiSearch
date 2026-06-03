@@ -1,4 +1,4 @@
-// Image Search Agent - Handles image search requests using Google Gemini and SearxNG
+// Image Search Agent - Handles image search requests and SearxNG image queries
 // Processes user queries and returns relevant images from multiple sources
 
 import { BaseMessage } from "@langchain/core/messages";
@@ -7,29 +7,18 @@ import {
   RunnableMap,
   RunnableLambda,
 } from "@langchain/core/runnables";
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import formateChatHistoryAsString from "../../../utils/formateHistory";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { StringOutputParser } from "@langchain/core/output_parsers";
 import { searchSearxng } from "../../external/core/searxng";
-import dotenv from "dotenv";
-
-dotenv.config();
-const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
-
-if (!GOOGLE_API_KEY) {
-  throw new Error("GOOGLE_API_KEY is not set in environment variables.");
-}
+import { createLLM } from "../../../config";
 
 /**
- * Initialize Google Gemini LLM for image search query processing
- * Uses temperature 0 for consistent query rephrasing
+ * Initialize the LLM using the central factory.
+ * Provider priority: OpenAI → Grok → Google Gemini
  */
-const llm = new ChatGoogleGenerativeAI({
-  temperature: 0,
-  modelName: "gemini-2.0-flash",
-  apiKey: GOOGLE_API_KEY,
-});
+const llm = createLLM(0); // temperature 0 for consistent query rephrasing
+
 
 /**
  * Prompt template for rephrasing user queries into image search terms
