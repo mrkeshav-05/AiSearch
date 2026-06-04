@@ -329,55 +329,139 @@ const basicAcademicSearch = (
     return emitter;
   }
 
-  try {
-    const basicAcademicSearchAnsweringChain =
-      createBasicAcademicSearchAnsweringChain(llm, embeddings);
-    const stream = basicAcademicSearchAnsweringChain.streamEvents(
-      {
+  const runProceduralSearch = async () => {
+    try {
+      // Step 1: Rephrase user query via LLM
+      let searchQuery = query;
+      try {
+        const rephrasePrompt = await PromptTemplate.fromTemplate(basicAcademicSearchRetrieverPrompt).invoke({
+          chat_history: formatChatHistoryAsString(history),
+          query: query
+        });
+        const rephraseResponse = await llm.invoke(rephrasePrompt);
+        searchQuery = await strParser.invoke(rephraseResponse);
+      } catch (error) {
+        console.warn("[AcademicSearch] LLM failed to rephrase query, falling back to original query:", error);
+      }
+
+      if (searchQuery === "not_needed") {
+        searchQuery = "";
+      }
+
+      // Step 2: Academic Search via SearXNG
+      let documents: Document[] = [];
+      if (searchQuery) {
+        const res = await searchSearxng(searchQuery, {
+          language: "en",
+          engines: ["arxiv", "google scholar", "internetarchivescholar", "pubmed", "semantic scholar", "crossref"],
+        });
+
+        if (!res.results || res.results.length === 0) {
+          const fallbackRes = await searchSearxng(searchQuery, {
+            language: "en",
+            engines: ["duckduckgo", "bing", "google"],
+            categories: ["science"],
+          });
+          if (fallbackRes.results && fallbackRes.results.length > 0) {
+            res.results = fallbackRes.results;
+          }
+        }
+
+        documents = (res.results || []).map(
+          (result) =>
+            new Document({
+              pageContent: result.content || result.title || "",
+              metadata: {
+                title: result.title,
+                url: result.url,
+                ...(result.img_src && { img_src: result.img_src }),
+                ...(result.author && { author: result.author }),
+              },
+            })
+        );
+      }
+
+      // Step 3: Rerank documents via embeddings (with sentinel/dummy detection)
+      let rerankedDocs = documents;
+      if (documents.length > 0) {
+        const docsWithContent = documents.filter((doc) => doc.pageContent && doc.pageContent.length > 0);
+        console.log(`[SOURCES DEBUG] Total documents from SearXNG: ${documents.length}, Documents with content: ${docsWithContent.length}`);
+
+        if (docsWithContent.length > 0) {
+          try {
+            const [docEmbeddings, queryEmbedding] = await Promise.all([
+              embeddings.embedDocuments(docsWithContent.map((doc) => doc.pageContent)),
+              embeddings.embedQuery(searchQuery || query),
+            ]);
+
+            console.log(`[SOURCES DEBUG] Query Vector Length: ${queryEmbedding?.length}, Doc Embeddings Count: ${docEmbeddings.length}`);
+
+            // SENTINEL CHECK: if embeddings failed (length=1 dummy), bypass similarity
+            if (!queryEmbedding || queryEmbedding.length <= 1) {
+              console.warn("[SOURCES] Embedding sentinel detected — bypassing similarity, using raw SearXNG order.");
+              rerankedDocs = docsWithContent.slice(0, 15);
+            } else {
+              const similarity = docEmbeddings.map((docEmbedding, i) => ({
+                index: i,
+                similarity: (docEmbedding.length <= 1)
+                  ? 1.0  // dummy doc embedding — assign max score
+                  : computeSimilarity(queryEmbedding, docEmbedding),
+              }));
+              const filtered = similarity
+                .filter((sim) => sim.similarity > 0.2)
+                .sort((a, b) => b.similarity - a.similarity)
+                .slice(0, 15)
+                .map((sim) => docsWithContent[sim.index]);
+
+              // If similarity filtering drops everything, fall back to raw order
+              rerankedDocs = filtered.length > 0 ? filtered : docsWithContent.slice(0, 15);
+            }
+          } catch (embErr) {
+            console.error("[SOURCES] Embedding/reranking failed, falling back to raw docs:", embErr);
+            rerankedDocs = docsWithContent.slice(0, 15);
+          }
+        }
+      }
+
+      // Step 4: EMIT SOURCES IMMEDIATELY (Before LLM processing)
+      console.log(`[WS EMIT] Sending payload to client. Type: sources, Sources count: ${rerankedDocs.length}`);
+      emitter.emit("data", JSON.stringify({ type: "sources", data: rerankedDocs }));
+
+      // Step 5: Generate and stream AI Response
+      const context = rerankedDocs.map((_, index) => `${index + 1}. ${rerankedDocs[index].pageContent}`).join("\n");
+      const responsePrompt = await ChatPromptTemplate.fromMessages([
+        ["system", basicAcademicSearchResponsePrompt],
+        new MessagesPlaceholder("chat_history"),
+        ["user", "{query}"],
+      ]).invoke({
         chat_history: history,
         query: query,
-      },
-      {
-        version: "v1",
-      }
-    );
+        context: context
+      });
 
-    handleStream(stream, emitter).catch((err: any) => {
-      // Check if this is a quota exceeded error
+      const stream = await llm.stream(responsePrompt);
+      for await (const chunk of stream) {
+        if (chunk.content) {
+          emitter.emit("data", JSON.stringify({ type: "response", data: chunk.content }));
+        }
+      }
+      
+      emitter.emit("end");
+
+    } catch (err: any) {
       if (isQuotaExceededError(err)) {
         console.log('[AcademicSearch] AI quota exceeded, falling back to direct SearXNG search');
         const fallbackEmitter = fallbackAcademicSearch(query);
-        
-        // Forward all events from fallback emitter
         fallbackEmitter.on("data", (data) => emitter.emit("data", data));
         fallbackEmitter.on("end", () => emitter.emit("end"));
         fallbackEmitter.on("error", (error) => emitter.emit("error", error));
       } else {
-        emitter.emit(
-          "error",
-          JSON.stringify({ data: "An error has occurred please try again later" })
-        );
+        emitter.emit("error", JSON.stringify({ data: "An error has occurred please try again later" }));
       }
-    });
-  } catch (err: any) {
-    // Check if this is a quota exceeded error
-    if (isQuotaExceededError(err)) {
-      console.log('[AcademicSearch] AI quota exceeded, falling back to direct SearXNG search');
-      const fallbackEmitter = fallbackAcademicSearch(query);
-      
-      // Forward all events from fallback emitter
-      fallbackEmitter.on("data", (data) => emitter.emit("data", data));
-      fallbackEmitter.on("end", () => emitter.emit("end"));
-      fallbackEmitter.on("error", (error) => emitter.emit("error", error));
-    } else {
-      emitter.emit(
-        "error",
-        JSON.stringify({ data: "An error has occurred please try again later" })
-      );
     }
-    console.error("Academic search error:", err);
-  }
+  };
 
+  runProceduralSearch();
   return emitter;
 };
 

@@ -62,7 +62,7 @@ const SearchImages = ({
 
   // Auto-fetch on mount when autoFetch is true
   useEffect(() => {
-    if (autoFetch && query) {
+    if (autoFetch && query && images === null) {
       fetchImages();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -86,14 +86,14 @@ const SearchImages = ({
 
       {/* Skeleton loading */}
       {loading && (
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-1.5 mb-1">
-            <ImageIcon size={12} className="text-[var(--text-muted)]" />
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Loading Images…</span>
+        <div className="flex flex-col gap-4 mt-2">
+          <div className="flex items-center gap-2">
+            <ImageIcon size={14} className="text-[var(--text-muted)]" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">Loading Images…</span>
           </div>
-          <div className="grid grid-cols-2 gap-1.5">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="skeleton rounded-xl aspect-video" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {[...Array(10)].map((_, i) => (
+              <div key={i} className="animate-pulse bg-white/5 rounded-xl aspect-video" />
             ))}
           </div>
         </div>
@@ -101,14 +101,14 @@ const SearchImages = ({
 
       {/* Error state */}
       {error && !loading && (
-        <div className="flex flex-col items-center gap-2 py-6 px-4 rounded-xl border border-dashed border-[var(--glass-border)] text-center">
-          <ImageOff size={20} className="text-[var(--text-muted)]" />
-          <p className="text-xs text-[var(--text-muted)]">Could not load images</p>
+        <div className="flex flex-col items-center gap-3 py-10 px-4 rounded-xl border border-dashed border-[var(--glass-border)] text-center mt-2">
+          <ImageOff size={24} className="text-[var(--text-muted)]" />
+          <p className="text-sm text-[var(--text-muted)]">Could not load images</p>
           <button
             onClick={fetchImages}
-            className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+            className="flex items-center gap-1.5 text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors"
           >
-            <RefreshCcw size={11} />
+            <RefreshCcw size={14} />
             <span>Retry</span>
           </button>
         </div>
@@ -116,63 +116,60 @@ const SearchImages = ({
 
       {/* Empty state */}
       {Array.isArray(images) && images.length === 0 && !loading && !error && (
-        <div className="flex flex-col items-center gap-2 py-5 px-4 rounded-xl border border-dashed border-[var(--glass-border)] text-center">
-          <ImageIcon size={18} className="text-[var(--text-muted)]" />
-          <p className="text-xs text-[var(--text-muted)]">No images found for this query</p>
+        <div className="flex flex-col items-center gap-3 py-10 px-4 rounded-xl border border-dashed border-[var(--glass-border)] text-center mt-2">
+          <ImageIcon size={24} className="text-[var(--text-muted)]" />
+          <p className="text-sm text-[var(--text-muted)]">No images found for this query.</p>
         </div>
       )}
 
       {/* Images grid */}
       {Array.isArray(images) && images.length > 0 && (
-        <>
-          <div className="mb-2 flex items-center gap-1.5">
-            <ImageIcon size={12} className="text-[var(--text-muted)]" />
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Images</span>
-            <span className="text-[10px] text-[var(--text-muted)] ml-auto">{images.length} found</span>
+        <div className="flex flex-col gap-4 mt-2">
+          <div className="flex items-center gap-2">
+            <ImageIcon size={14} className="text-[var(--text-muted)]" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">Images</span>
+            <span className="text-xs text-[var(--text-muted)] bg-[var(--surface-3)] px-2 py-0.5 rounded-full ml-auto">
+              {images.length} found
+            </span>
           </div>
-          <div className="grid grid-cols-2 gap-1.5">
-            {(images.length > 4 ? images.slice(0, 3) : images).map((img, i) => (
-              <div
-                key={i}
-                onClick={() => {
-                  setOpen(true);
-                  if (slides.length > i) {
-                    setSlides([slides[i], ...slides.slice(0, i), ...slides.slice(i + 1)]);
-                  }
-                }}
-                className="relative rounded-xl overflow-hidden aspect-video cursor-zoom-in group"
-              >
-                <Image
-                  src={img.img_src}
-                  alt={img.title || "Image"}
-                  fill
-                  className="object-cover transition-transform duration-300 group-hover:scale-105"
-                  unoptimized
-                />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-200 flex items-center justify-center">
-                  <ZoomIn size={18} className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
-                </div>
-              </div>
-            ))}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {images.map((img, i) => {
+              let domain = "";
+              try {
+                domain = new URL(img.url).hostname.replace("www.", "");
+              } catch (e) {
+                domain = img.url;
+              }
 
-            {images.length > 4 && (
-              <button
-                onClick={() => setOpen(true)}
-                className="relative rounded-xl overflow-hidden aspect-video bg-[var(--surface-3)] border border-[var(--glass-border)] hover:border-[var(--glass-border-hover)] flex flex-col items-center justify-center gap-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all duration-200"
-              >
-                <div className="flex -space-x-1">
-                  {images.slice(3, 6).map((img, i) => (
-                    <div key={i} className="w-6 h-6 rounded overflow-hidden border border-[var(--glass-border)]">
-                      <Image src={img.img_src} alt="" width={24} height={24} className="object-cover w-full h-full" unoptimized />
-                    </div>
-                  ))}
-                </div>
-                <span className="text-[10px]">+{images.length - 3} more</span>
-              </button>
-            )}
+              return (
+                <a
+                  key={i}
+                  href={img.url || img.img_src}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="relative rounded-xl overflow-hidden aspect-video group hover:scale-[1.03] transition-all duration-300 shadow-md hover:shadow-cyan-500/10 cursor-pointer border border-transparent hover:border-cyan-500/30 bg-[var(--surface-2)]"
+                >
+                  <Image
+                    src={img.img_src}
+                    alt={img.title || "Image"}
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                  {/* Perplexity-style Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-2.5">
+                    <p className="text-white text-xs font-medium line-clamp-2 leading-tight shadow-sm">
+                      {img.title}
+                    </p>
+                    <p className="text-white/70 text-[10px] mt-1 truncate">
+                      {domain}
+                    </p>
+                  </div>
+                </a>
+              );
+            })}
           </div>
-          <Lightbox open={open} close={() => setOpen(false)} slides={slides} />
-        </>
+        </div>
       )}
     </div>
   );

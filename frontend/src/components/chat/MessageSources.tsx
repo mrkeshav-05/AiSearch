@@ -34,11 +34,11 @@ const SourceCard = ({
   const faviconUrl = `https://s2.googleusercontent.com/s2/favicons?domain_url=${source.metadata.url}&sz=32`;
 
   const inner = (
-    <div className="source-card p-3 flex flex-col gap-2 h-full cursor-pointer group"
+    <div className="source-card p-3.5 flex flex-col gap-2.5 h-full cursor-pointer group min-h-[72px]"
       onClick={onClick}
     >
       {/* Title */}
-      <p className="text-[var(--text-primary)] text-xs font-medium leading-tight line-clamp-2 group-hover:text-[#93c5fd] transition-colors">
+      <p className="text-[var(--text-primary)] text-xs font-semibold leading-tight line-clamp-2 group-hover:text-[#93c5fd] transition-colors">
         {source.metadata.title || domain}
       </p>
 
@@ -59,8 +59,8 @@ const SourceCard = ({
           )}
           <span className="text-[10px] text-[var(--text-muted)] truncate">{domain}</span>
         </div>
-        <span className="flex-shrink-0 text-[10px] font-semibold text-[var(--accent-blue)] bg-blue-500/10 border border-blue-500/20 rounded px-1 py-0.5">
-          {index + 1}
+        <span className="flex-shrink-0 text-[10px] font-bold text-[var(--accent-blue)] bg-blue-500/15 border border-blue-500/25 rounded-md px-1.5 py-0.5">
+          [{index + 1}]
         </span>
       </div>
     </div>

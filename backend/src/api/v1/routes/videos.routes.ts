@@ -191,7 +191,8 @@ const postVideosHandler: express.RequestHandler = async (req, res) => {
         const parsedError = JSON.parse(errorData);
         console.error("[Videos Route] Search error:", parsedError);
         
-        res.status(500).json({
+        res.status(200).json({
+          sources: [],
           error: "Video search failed",
           details: parsedError.data || "Unknown error occurred",
           timestamp: new Date().toISOString(),
@@ -202,7 +203,8 @@ const postVideosHandler: express.RequestHandler = async (req, res) => {
         });
       } catch (parseError) {
         console.error("[Videos Route] Error parsing error data:", parseError);
-        res.status(500).json({
+        res.status(200).json({
+          sources: [],
           error: "Video search failed",
           details: "Internal processing error",
           timestamp: new Date().toISOString(),
@@ -217,7 +219,8 @@ const postVideosHandler: express.RequestHandler = async (req, res) => {
   } catch (error) {
     console.error("[Videos Route] Unexpected error:", error);
     
-    res.status(500).json({
+    res.status(200).json({
+      sources: [],
       error: "Internal server error",
       details: error instanceof Error ? error.message : "Unknown error occurred",
       timestamp: new Date().toISOString()

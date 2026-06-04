@@ -34,6 +34,8 @@ services:
   searxng:
     container_name: searxng
     image: searxng/searxng:latest
+    volumes:
+      - ./settings.yml:/etc/searxng/settings.yml
     expose:
       - 4000
     ports:
@@ -49,6 +51,7 @@ services:
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
       - GROK_API_KEY=${GROK_API_KEY:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - NODE_ENV=development

@@ -102,8 +102,8 @@ router.post("/", async (req, res) => {
     // Return successful response with image results
     res.status(200).json({images});
   }catch(err){
-    // Handle errors with generic message to avoid exposing internal details
-    res.status(500).json({message: "An error has occurred."});
+    // Return empty array gracefully instead of a 500 error on scraping block/failure
+    res.status(200).json({ images: [] });
     
     // Log detailed error information for debugging
     if (err instanceof Error) {

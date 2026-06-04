@@ -2,6 +2,7 @@
 
 import { Document } from "@langchain/core/documents";
 import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import EmptyChat from "./EmptyChat";
 import Chat from "./Chat";
 import { getSuggestions } from "@/lib/actions";
@@ -155,20 +156,26 @@ const ChatWindow = () => {
 
       if (data.type === "sources") {
         sources = data.data;
-        if (!added) {
-          setMessages((prevMessages) => [
-            ...prevMessages,
-            {
-              content: "",
-              id: data.messageId,
-              role: "assistant",
-              sources: sources,
-              aiStatus: currentAiStatus,
-              createdAt: new Date(),
-            },
-          ]);
-          added = true;
-        }
+        flushSync(() => {
+          if (!added) {
+            setMessages((prevMessages) => [
+              ...prevMessages,
+              {
+                content: "",
+                id: data.messageId,
+                role: "assistant",
+                sources: sources,
+                aiStatus: currentAiStatus,
+                createdAt: new Date(),
+              },
+            ]);
+            added = true;
+          } else {
+            setMessages((prev) =>
+              prev.map((m) => (m.id === data.messageId ? { ...m, sources } : m))
+            );
+          }
+        });
         setMessageAppeared(true);
       }
 

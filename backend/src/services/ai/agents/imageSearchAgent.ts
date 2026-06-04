@@ -75,9 +75,16 @@ const imageSearchChain = RunnableSequence.from([
       return input.query;
     },
   }),
-  PromptTemplate.fromTemplate(imageSearchChainPrompt),
-  llm,
-  strParser,
+  RunnableLambda.from(async (input: { chat_history: string; query: string }) => {
+    try {
+      const promptValue = await PromptTemplate.fromTemplate(imageSearchChainPrompt).invoke(input);
+      const response = await llm.invoke(promptValue);
+      return await strParser.invoke(response);
+    } catch (error) {
+      console.warn("[ImageSearchAgent] LLM failed to rephrase query, falling back to original query:", error);
+      return input.query;
+    }
+  }),
   RunnableLambda.from(async (input: string) => {
     console.log("[ImageSearchAgent] Searching for:", input);
     
@@ -106,10 +113,11 @@ const imageSearchChain = RunnableSequence.from([
       const images: { img_src: string; url: string; title: string }[] = [];
       res.results.forEach((result, index) => {
         try {
-          if(result && result.img_src && result.url && result.title) {
+          const imgSrc = result.img_src || result.thumbnail;
+          if(result && imgSrc && result.title) {
             images.push({
-              img_src: result.img_src,
-              url: result.url,
+              img_src: imgSrc,
+              url: result.url || imgSrc, // fallback url to image source if missing
               title: result.title,
             });
           } else {

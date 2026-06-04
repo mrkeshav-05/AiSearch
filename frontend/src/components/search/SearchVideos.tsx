@@ -77,7 +77,7 @@ const SearchVideos = ({
 
   // Auto-fetch on mount when autoFetch is true
   useEffect(() => {
-    if (autoFetch && query) {
+    if (autoFetch && query && videos === null) {
       fetchVideos();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

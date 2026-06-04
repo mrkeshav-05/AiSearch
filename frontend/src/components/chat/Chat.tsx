@@ -43,9 +43,32 @@ const Chat = ({
     };
   });
 
-  // Auto-scroll to latest
+  const isAtBottom = useRef(true);
+
+  // Track if user is at bottom of viewport
   useEffect(() => {
-    messageEnd.current?.scrollIntoView({ behavior: "smooth" });
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+      // 150px tolerance
+      isAtBottom.current = scrollHeight - scrollTop - clientHeight < 150;
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Smart auto-scroll
+  useEffect(() => {
+    // Always force scroll when a new user message is sent
+    const isNewUserMessage = messages.length > 0 && messages[messages.length - 1].role === "user";
+    
+    if (isNewUserMessage) {
+      isAtBottom.current = true;
+      messageEnd.current?.scrollIntoView({ behavior: "smooth" });
+    } else if (isAtBottom.current) {
+      // Use 'auto' behavior during streaming to prevent jittery/shaky UI
+      messageEnd.current?.scrollIntoView({ behavior: "auto" });
+    }
+
     if (messages.length === 1) {
       document.title = `${messages[0].content.substring(0, 40)} — AiSearch`;
     }
@@ -54,7 +77,7 @@ const Chat = ({
   return (
     <div className="flex flex-col min-h-screen">
       {/* Message feed */}
-      <div className="flex flex-col gap-8 pt-6 pb-48 px-4 sm:px-6 md:px-10 max-w-6xl mx-auto w-full">
+      <div className="flex flex-col gap-8 pt-6 pb-64 px-4 sm:px-6 md:px-10 max-w-6xl mx-auto w-full">
         {messages.map((msg, i) => {
           const isLast = i === messages.length - 1;
           return (

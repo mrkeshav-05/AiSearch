@@ -124,225 +124,6 @@ const strParser = new StringOutputParser();
  * - { type: "response", data: string } - AI response text chunks
  * - "end" event - Signals completion of entire process
  */
-const handleStream = async (
-  stream: AsyncGenerator<StreamEvent, any, unknown>,
-  emitter: EventEmitter
-) => {
-  for await (const event of stream) {
-    // Handle completion of source retrieval step
-    if (
-      event.event === "on_chain_end" &&
-      event.name === "FinalSourceRetriever"
-    ) {
-      emitter.emit(
-        "data",
-        JSON.stringify({ type: "sources", data: event.data.output })
-      );
-    }
-    // Handle streaming AI response generation
-    if (
-      event.event === "on_chain_stream" &&
-      event.name === "FinalResponseGenerator"
-    ) {
-      emitter.emit(
-        "data",
-        JSON.stringify({ type: "response", data: event.data.chunk })
-      );
-    }
-    // Handle completion of response generation
-    if (
-      event.event === "on_chain_end" &&
-      event.name === "FinalResponseGenerator"
-    ) {
-      emitter.emit("end");
-    }
-  }
-};
-
-// Type definition for basic chain input structure
-type BasicChainInput = {
-  chat_history: BaseMessage[];
-  query: string;
-};
-
-/**
- * Creates a search retriever chain that processes user queries and fetches relevant documents
- * 
- * @param llm - Language model for query rephrasing
- * @returns RunnableSequence that processes queries and returns search results
- * 
- * Chain Flow:
- * 1. Rephrase user query using conversation context (basicSearchRetrieverPrompt)
- * 2. Generate standalone search query via LLM
- * 3. Parse LLM output to string
- * 4. Execute search via SearxNG if query is valid
- * 5. Convert search results to LangChain Document format
- * 
- * Output Structure:
- * - { query: string, docs: Document[] } - Search query and results
- * - { query: "", docs: [] } - For non-searchable queries
- * 
- * Document Metadata:
- * - title: Page title from search result
- * - url: Source URL
- * - img_src: Optional image source
- */
-const createBasicWebSearchRetrieverChain = (llm: BaseChatModel) => {
-  return RunnableSequence.from([
-    PromptTemplate.fromTemplate(basicSearchRetrieverPrompt),
-    llm,
-    strParser,
-    RunnableLambda.from(async (input: string) => {
-      // Skip search for non-query inputs (greetings, writing tasks)
-      if (input === "not_needed") {
-        return { query: "", docs: [] };
-      }
-
-      // Execute web search using SearxNG
-      const res = await searchSearxng(input, {
-        language: "en",
-      });
-
-      // Convert search results to LangChain Document format
-      const documents = res.results.map(
-        (result) =>
-          new Document({
-            pageContent: result.content || "",
-            metadata: {
-              title: result.title,
-              url: result.url,
-              ...(result.img_src && { img_src: result.img_src }),
-            },
-          })
-      );
-      console.log(documents);
-
-      return { query: input, docs: documents };
-    }),
-  ]);
-};
-
-/**
- * Creates the complete web search answering chain with document reranking and AI response generation
- * 
- * @param llm - Language model for generating responses
- * @param embeddings - Embedding model for document similarity computation
- * @returns RunnableSequence that handles complete search-to-response pipeline
- * 
- * Chain Components:
- * 1. Search Retriever - Fetches relevant documents from web search
- * 2. Document Reranker - Uses embeddings to rank documents by relevance
- * 3. Response Generator - Creates AI response with citations
- * 
- * Advanced Features:
- * - Semantic reranking using cosine similarity
- * - Context processing for optimal AI response generation
- * - Citation numbering for source attribution
- */
-const createBasicWebSearchAnsweringChain = (
-  llm: BaseChatModel,
-  embeddings: Embeddings
-) => {
-  const basicWebSearchRetrieverChain = createBasicWebSearchRetrieverChain(llm);
-
-  /**
-   * Processes documents into numbered format for AI context
-   * 
-   * @param docs - Array of LangChain Documents
-   * @returns Formatted string with numbered document content
-   * 
-   * Format: "1. [content]\n2. [content]\n..."
-   * Used for providing context to AI for citation numbering
-   */
-  const processDocs = async (docs: Document[]) => {
-    return docs
-      .map((_, index) => `${index + 1}. ${docs[index].pageContent}`)
-      .join("\n");
-  };
-
-  /**
-   * Reranks documents using semantic similarity to improve relevance
-   * 
-   * @param query - Search query string
-   * @param docs - Array of documents to rerank
-   * @returns Documents sorted by semantic similarity to query
-   * 
-   * Process:
-   * 1. Filter documents with content
-   * 2. Generate embeddings for both documents and query
-   * 3. Compute cosine similarity scores
-   * 4. Sort documents by similarity score (descending)
-   * 5. Return top 15 most relevant documents
-   */
-  const rerankDocs = async ({
-    query,
-    docs,
-  }: {
-    query: string;
-    docs: Document[];
-  }) => {
-    if (docs.length === 0) {
-      return docs;
-    }
-
-    // Filter out empty documents
-    const docsWithContent = docs.filter(
-      (doc) => doc.pageContent && doc.pageContent.length > 0
-    );
-
-    // Generate embeddings for similarity computation
-    const [docEmbeddings, queryEmbedding] = await Promise.all([
-      embeddings.embedDocuments(docsWithContent.map((doc) => doc.pageContent)),
-      embeddings.embedQuery(query),
-    ]);
-
-    const similarity = docEmbeddings.map((docEmbedding, i) => {
-      const sim = computeSimilarity(queryEmbedding, docEmbedding);
-
-      return {
-        index: i,
-        similarity: sim,
-      };
-    });
-
-    const sortedDocs = similarity
-      .sort((a, b) => b.similarity - a.similarity)
-      .filter((sim) => sim.similarity > 0.5)
-      .slice(0, 15)
-      .map((sim) => docsWithContent[sim.index]);
-
-    return sortedDocs;
-  };
-
-  return RunnableSequence.from([
-    RunnableMap.from({
-      query: (input: BasicChainInput) => input.query,
-      chat_history: (input: BasicChainInput) => input.chat_history,
-      context: RunnableSequence.from([
-        (input) => ({
-          query: input.query,
-          chat_history: formatChatHistoryAsString(input.chat_history),
-        }),
-        basicWebSearchRetrieverChain
-          .pipe(rerankDocs)
-          .withConfig({
-            runName: "FinalSourceRetriever",
-          })
-          .pipe(processDocs),
-      ]),
-    }),
-    ChatPromptTemplate.fromMessages([
-      ["system", basicWebSearchResponsePrompt],
-      new MessagesPlaceholder("chat_history"),
-      ["user", "{query}"],
-    ]),
-    llm,
-    strParser,
-  ]).withConfig({
-    runName: "FinalResponseGenerator",
-  });
-};
-
 const basicWebSearch = (
   query: string,
   history: BaseMessage[],
@@ -362,23 +143,110 @@ const basicWebSearch = (
     return emitter;
   }
 
-  try {
-    const basicWebSearchAnsweringChain = createBasicWebSearchAnsweringChain(
-      llm,
-      embeddings
-    );
+  const runProceduralSearch = async () => {
+    try {
+      // Step 1: Rephrase user query via LLM
+      let searchQuery = query;
+      try {
+        const rephrasePrompt = await PromptTemplate.fromTemplate(basicSearchRetrieverPrompt).invoke({
+          chat_history: formatChatHistoryAsString(history),
+          query: query
+        });
+        const rephraseResponse = await llm.invoke(rephrasePrompt);
+        searchQuery = await strParser.invoke(rephraseResponse);
+      } catch (error) {
+        console.warn("[WebSearch] LLM failed to rephrase query, falling back to original query:", error);
+      }
 
-    const stream = basicWebSearchAnsweringChain.streamEvents(
-      {
+      if (searchQuery === "not_needed") {
+        searchQuery = "";
+      }
+
+      // Step 2: Web Search via SearXNG
+      let documents: Document[] = [];
+      if (searchQuery) {
+        const res = await searchSearxng(searchQuery, { language: "en" });
+        documents = res.results.map(
+          (result) =>
+            new Document({
+              pageContent: result.content || "",
+              metadata: {
+                title: result.title,
+                url: result.url,
+                ...(result.img_src && { img_src: result.img_src }),
+              },
+            })
+        );
+      }
+
+      // Step 3: Rerank documents via embeddings (with sentinel/dummy detection)
+      let rerankedDocs = documents;
+      if (documents.length > 0) {
+        const docsWithContent = documents.filter((doc) => doc.pageContent && doc.pageContent.length > 0);
+        console.log(`[SOURCES DEBUG] Total documents from SearXNG: ${documents.length}, Documents with content: ${docsWithContent.length}`);
+
+        if (docsWithContent.length > 0) {
+          try {
+            const [docEmbeddings, queryEmbedding] = await Promise.all([
+              embeddings.embedDocuments(docsWithContent.map((doc) => doc.pageContent)),
+              embeddings.embedQuery(searchQuery || query),
+            ]);
+
+            console.log(`[SOURCES DEBUG] Query Vector Length: ${queryEmbedding?.length}, Doc Embeddings Count: ${docEmbeddings.length}`);
+
+            // SENTINEL CHECK: if embeddings failed (length=1 dummy), bypass similarity
+            if (!queryEmbedding || queryEmbedding.length <= 1) {
+              console.warn("[SOURCES] Embedding sentinel detected — bypassing similarity, using raw SearXNG order.");
+              rerankedDocs = docsWithContent.slice(0, 15);
+            } else {
+              const similarity = docEmbeddings.map((docEmbedding, i) => ({
+                index: i,
+                similarity: (docEmbedding.length <= 1)
+                  ? 1.0  // dummy doc embedding — assign max score
+                  : computeSimilarity(queryEmbedding, docEmbedding),
+              }));
+              const filtered = similarity
+                .sort((a, b) => b.similarity - a.similarity)
+                .filter((sim) => sim.similarity > 0.5)
+                .slice(0, 15)
+                .map((sim) => docsWithContent[sim.index]);
+
+              // If similarity filtering drops everything, fall back to raw order
+              rerankedDocs = filtered.length > 0 ? filtered : docsWithContent.slice(0, 15);
+            }
+          } catch (embErr) {
+            console.error("[SOURCES] Embedding/reranking failed, falling back to raw docs:", embErr);
+            rerankedDocs = docsWithContent.slice(0, 15);
+          }
+        }
+      }
+
+      // Step 4: EMIT SOURCES IMMEDIATELY (Before LLM processing)
+      console.log(`[WS EMIT] Sending payload to client. Type: sources, Sources count: ${rerankedDocs.length}`);
+      emitter.emit("data", JSON.stringify({ type: "sources", data: rerankedDocs }));
+
+      // Step 5: Generate and stream AI Response
+      const context = rerankedDocs.map((_, index) => `${index + 1}. ${rerankedDocs[index].pageContent}`).join("\n");
+      const responsePrompt = await ChatPromptTemplate.fromMessages([
+        ["system", basicWebSearchResponsePrompt],
+        new MessagesPlaceholder("chat_history"),
+        ["user", "{query}"],
+      ]).invoke({
         chat_history: history,
         query: query,
-      },
-      {
-        version: "v1",
-      }
-    );
+        context: context
+      });
 
-    handleStream(stream, emitter).catch((err) => {
+      const stream = await llm.stream(responsePrompt);
+      for await (const chunk of stream) {
+        if (chunk.content) {
+          emitter.emit("data", JSON.stringify({ type: "response", data: chunk.content }));
+        }
+      }
+      
+      emitter.emit("end");
+
+    } catch (err: any) {
       const providerInfo = getActiveProviderInfo();
       const parsedError = parseAIError(err, providerInfo.providerName);
       
@@ -390,35 +258,12 @@ const basicWebSearch = (
         fallbackEmitter.on("end", () => emitter.emit("end"));
         fallbackEmitter.on("error", (error) => emitter.emit("error", error));
       } else {
-        emitter.emit(
-          "error",
-          JSON.stringify({
-            data: `An error has occurred please try again later: ${err}`,
-          })
-        );
+        emitter.emit("error", JSON.stringify({ data: `An error has occurred please try again later: ${err}` }));
       }
-    });
-  } catch (err: any) {
-    const providerInfo = getActiveProviderInfo();
-    const parsedError = parseAIError(err, providerInfo.providerName);
-    
-    if (parsedError.isQuotaError) {
-      console.log(`[WebSearch] AI quota/credits exceeded (${parsedError.type}), falling back to direct SearXNG search`);
-      const fallbackEmitter = fallbackWebSearch(query, providerInfo.providerName, parsedError.type);
-      
-      fallbackEmitter.on("data", (data) => emitter.emit("data", data));
-      fallbackEmitter.on("end", () => emitter.emit("end"));
-      fallbackEmitter.on("error", (error) => emitter.emit("error", error));
-    } else {
-      emitter.emit(
-        "error",
-        JSON.stringify({
-          data: `An error has occurred please try again later: ${err}`,
-        })
-      );
     }
-  }
+  };
 
+  runProceduralSearch();
   return emitter;
 };
 

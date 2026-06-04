@@ -214,9 +214,16 @@ const handleStream = async (
 
 const createVideoSearchRetrieverChain = (llm: BaseChatModel) => {
   return RunnableSequence.from([
-    PromptTemplate.fromTemplate(videoSearchRetrieverPrompt),
-    llm,
-    strParser,
+    RunnableLambda.from(async (input: { chat_history: string; query: string }) => {
+      try {
+        const promptValue = await PromptTemplate.fromTemplate(videoSearchRetrieverPrompt).invoke(input);
+        const response = await llm.invoke(promptValue);
+        return await strParser.invoke(response);
+      } catch (error) {
+        console.warn("[VideoSearchAgent] LLM failed to rephrase query, falling back to original query:", error);
+        return input.query;
+      }
+    }),
     RunnableLambda.from(async (input: string) => {
       if (input === "not_needed") {
         return { query: "", docs: [] };
@@ -271,7 +278,13 @@ const videoSearch = (
       }
     );
 
-    handleStream(stream, emitter);
+    handleStream(stream, emitter).catch((err) => {
+      console.error("Video search stream error:", err);
+      emitter.emit(
+        "error",
+        JSON.stringify({ data: "An error has occurred please try again later" })
+      );
+    });
   } catch (err) {
     emitter.emit(
       "error",

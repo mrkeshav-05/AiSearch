@@ -19,6 +19,7 @@ interface SearxngSearchResult {
 }
 
 // Track if we've detected a quota issue - once detected, skip AI for subsequent requests
+// Groq is PRIMARY — quota exhaustion resets after QUOTA_CACHE_DURATION ms
 let quotaExhausted = false;
 let quotaCheckTime = 0;
 const QUOTA_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -50,9 +51,14 @@ export const markQuotaExhausted = (): void => {
 };
 
 /**
- * Quick API health check - tests if the active AI API is available
- * Checks Grok (xAI) when GROK_API_KEY is set, otherwise checks Google Gemini.
- * Returns false immediately if quota is exhausted.
+ * Quick API health check - tests if the PRIMARY active AI API is available.
+ *
+ * Check order (mirrors provider priority):
+ *   1. Groq          — PRIMARY (llama-3.3-70b-versatile)
+ *   2. Grok (xAI)    — FALLBACK 1a
+ *   3. Google Gemini — FALLBACK 1c
+ *
+ * Returns false immediately if quota is already known to be exhausted.
  */
 export const checkApiHealth = async (): Promise<boolean> => {
   // If we already know quota is exhausted, skip the check
@@ -61,7 +67,44 @@ export const checkApiHealth = async (): Promise<boolean> => {
     return false;
   }
 
-  // Prefer Grok health check when key is available
+  // ── 1. PRIMARY: Groq ────────────────────────────────────────────────────────
+  const groqApiKey = process.env.GROQ_API_KEY;
+  if (groqApiKey) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      const response = await fetch(
+        'https://api.groq.com/openai/v1/models',
+        {
+          signal: controller.signal,
+          headers: {
+            'Authorization': `Bearer ${groqApiKey}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      clearTimeout(timeoutId);
+
+      if (response.status === 429) {
+        markQuotaExhausted();
+        console.log('[FALLBACK] Groq rate-limited (429) — marking quota exhausted');
+        return false;
+      }
+
+      if (response.ok) {
+        console.log('[FALLBACK] Groq health check ✅ OK');
+        return true;
+      }
+
+      console.log(`[FALLBACK] Groq health check failed (status ${response.status}) — trying next provider`);
+    } catch (error) {
+      console.log('[FALLBACK] Groq API health check error:', error);
+    }
+  }
+
+  // ── 2. FALLBACK 1a: Grok (xAI) ─────────────────────────────────────────────
   const grokApiKey = process.env.GROK_API_KEY;
   if (grokApiKey) {
     try {
@@ -83,33 +126,37 @@ export const checkApiHealth = async (): Promise<boolean> => {
 
       if (response.status === 429) {
         markQuotaExhausted();
+        console.log('[FALLBACK] Grok (xAI) rate-limited (429) — marking quota exhausted');
         return false;
       }
 
-      return response.ok;
+      if (response.ok) {
+        console.log('[FALLBACK] Grok (xAI) health check ✅ OK');
+        return true;
+      }
+
+      console.log(`[FALLBACK] Grok health check failed (status ${response.status}) — trying next provider`);
     } catch (error) {
-      console.log('[FALLBACK] Grok API health check failed:', error);
-      return false;
+      console.log('[FALLBACK] Grok API health check error:', error);
     }
   }
 
-  // Fall back to Google Gemini health check
-  const apiKey = process.env.GOOGLE_API_KEY;
-  if (!apiKey) {
-    console.log('[FALLBACK] No API key configured');
+  // ── 3. FALLBACK 1c: Google Gemini ───────────────────────────────────────────
+  const geminiApiKey = process.env.GOOGLE_API_KEY;
+  if (!geminiApiKey) {
+    console.log('[FALLBACK] No API keys configured — all providers unavailable');
     return false;
   }
 
   try {
-    // Quick lightweight check - just list models (minimal quota impact)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${geminiApiKey}`,
       {
         signal: controller.signal,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       }
     );
 
@@ -117,12 +164,17 @@ export const checkApiHealth = async (): Promise<boolean> => {
 
     if (response.status === 429) {
       markQuotaExhausted();
+      console.log('[FALLBACK] Gemini rate-limited (429) — marking quota exhausted');
       return false;
+    }
+
+    if (response.ok) {
+      console.log('[FALLBACK] Gemini health check ✅ OK');
     }
 
     return response.ok;
   } catch (error) {
-    console.log('[FALLBACK] API health check failed:', error);
+    console.log('[FALLBACK] Gemini API health check error:', error);
     return false;
   }
 };

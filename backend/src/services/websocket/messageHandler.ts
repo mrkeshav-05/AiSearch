@@ -17,7 +17,7 @@ import basicPinterestSearch from "../ai/agents/pinterestSearchAgent";
 import { getCached, setCached, normalizeQuery } from "../../services/cache/redis";
 
 // Instantiate the active LLM and embeddings using the central factory.
-// Provider selection is automatic: OpenAI → Grok → Google Gemini.
+// Priority: Groq (PRIMARY) → Grok/xAI → OpenAI → Gemini → SearXNG RAW fallback.
 const llm: BaseChatModel = createLLM();
 const embeddings: Embeddings = getEmbeddingsInstance();
 
