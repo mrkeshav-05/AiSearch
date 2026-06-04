@@ -1,23 +1,20 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { ChatHistoryProvider } from "@/context/ChatHistoryContext";
 import { ChatSessionProvider } from "@/context/ChatSessionContext";
 import AppShell from "@/components/layout/AppShell";
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "AiSearch",
-  description: "A search engine for AI models",
+  title: "AiSearch — AI-Powered Search",
+  description: "Intelligent AI search powered by real-time web results, citations, and follow-up questions.",
 };
 
 export default function RootLayout({
@@ -26,15 +23,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      className="h-full"
-      lang="en">
+    <html className="h-full" lang="en">
       <head>
-        <link rel="icon" href="brain2.svg"/>
+        <link rel="icon" href="brain2.svg" />
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased h-full`}
-      >
+      <body className={`${inter.variable} font-sans antialiased h-full`}>
         <AuthProvider>
           <ChatHistoryProvider>
             <ChatSessionProvider>

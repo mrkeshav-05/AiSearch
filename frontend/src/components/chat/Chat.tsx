@@ -1,7 +1,3 @@
-// Chat Component - Main conversation interface
-// Displays message history and handles user interactions in active chat sessions
-// Manages message rendering, auto-scrolling, and loading states
-
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -10,34 +6,6 @@ import MessageBox from "./MessageBox";
 import MessageBoxLoading from "./MessageBoxLoading";
 import MessageInput from "./MessageInput";
 
-/**
- * Main chat interface component for active conversations
- * 
- * @param messages - Array of conversation messages (user and AI)
- * @param sendMessage - Function to send new message via WebSocket
- * @param loading - Boolean indicating if AI is processing
- * @param messageAppeared - Boolean indicating if new message started appearing
- * @param rewrite - Function to regenerate AI response for a message
- * 
- * Features:
- * - Message history display with scrolling
- * - Auto-scroll to newest messages
- * - Loading indicators during AI processing
- * - Message rewrite functionality
- * - Responsive layout with proper spacing
- * - Dynamic divider width calculation
- * 
- * State Management:
- * - dividerWidth: Width of message divider for consistent spacing
- * - dividerRef: Reference for measuring divider dimensions
- * - messageEnd: Reference for auto-scrolling to latest message
- * 
- * Layout Structure:
- * - Message history container (scrollable)
- * - Individual MessageBox components for each message
- * - Loading indicator for pending AI responses
- * - Fixed message input at bottom
- */
 const Chat = ({
   loading,
   messageAppeared,
@@ -53,60 +21,80 @@ const Chat = ({
   rewrite: (messageId: string) => void;
   suggestionsLoading: boolean;
 }) => {
-  // State for dynamic UI measurements
-  const [dividerWidth, setDividerWidth] = useState(0);
   const dividerRef = useRef<HTMLDivElement | null>(null);
   const messageEnd = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLDivElement | null>(null);
+  const [inputWidth, setInputWidth] = useState(0);
 
+  // Measure the chat container for fixed input bar
   useEffect(() => {
-    const updateDividerWidth = () => {
+    const updateWidth = () => {
       if (dividerRef.current) {
-        setDividerWidth(dividerRef.current.scrollWidth);
+        setInputWidth(dividerRef.current.scrollWidth);
       }
     };
-    updateDividerWidth();
-    window.addEventListener("resize", updateDividerWidth);
+    updateWidth();
+    const observer = new ResizeObserver(updateWidth);
+    if (dividerRef.current) observer.observe(dividerRef.current);
+    window.addEventListener("resize", updateWidth);
     return () => {
-      window.removeEventListener("resize", updateDividerWidth);
+      observer.disconnect();
+      window.removeEventListener("resize", updateWidth);
     };
   });
 
+  // Auto-scroll to latest
   useEffect(() => {
     messageEnd.current?.scrollIntoView({ behavior: "smooth" });
-
     if (messages.length === 1) {
-      document.title = `${messages[0].content.substring(0, 30)} - AiSearch`;
+      document.title = `${messages[0].content.substring(0, 40)} — AiSearch`;
     }
   }, [messages]);
+
   return (
-    <div className="flex flex-col space-y-6 pt-8 pb-44 lg:pb-32 sm:mx-4 md:mx-8">
-      {messages.map((msg, i) => {
-        const isLast = i === messages.length - 1;
-        return (
-          <div key={i}>
-            <MessageBox
-              message={msg}
-              history={messages}
-              loading={loading}
-              dividerRef={isLast ? dividerRef : undefined}
-              isLast={isLast}
-              rewrite={rewrite}
-              messageIndex={i}
-              sendMessage={sendMessage}
-              suggestionsLoading={suggestionsLoading}
-            />
-            {!isLast && msg.role === "assistant" && (
-              <div className="h-px w-full bg-[#1C1C1C]" />
-            )}
+    <div className="flex flex-col min-h-screen">
+      {/* Message feed */}
+      <div className="flex flex-col gap-8 pt-6 pb-48 px-4 sm:px-6 md:px-10 max-w-6xl mx-auto w-full">
+        {messages.map((msg, i) => {
+          const isLast = i === messages.length - 1;
+          return (
+            <div key={i}>
+              <MessageBox
+                message={msg}
+                history={messages}
+                loading={loading}
+                dividerRef={isLast ? dividerRef : undefined}
+                isLast={isLast}
+                rewrite={rewrite}
+                messageIndex={i}
+                sendMessage={sendMessage}
+                suggestionsLoading={suggestionsLoading}
+              />
+              {/* Divider between Q&A pairs */}
+              {!isLast && msg.role === "assistant" && (
+                <div className="section-divider mt-8" />
+              )}
+            </div>
+          );
+        })}
+
+        {/* Loading skeleton */}
+        {loading && !messageAppeared && (
+          <div className="animate-fade-in">
+            <MessageBoxLoading />
           </div>
-        );
-      })}
-      {loading && !messageAppeared && <MessageBoxLoading />}
-      <div ref={messageEnd} className="h-0" />
-      {dividerWidth > 0 && (
+        )}
+
+        {/* Scroll anchor */}
+        <div ref={messageEnd} className="h-0" />
+      </div>
+
+      {/* Sticky input bar */}
+      {inputWidth > 0 && (
         <div
-          className={`bottom-24 lg:bottom-0 fixed z-40`}
-          style={{ width: dividerWidth }}
+          ref={inputRef}
+          className="fixed bottom-0 z-50"
+          style={{ width: inputWidth }}
         >
           <MessageInput sendMessage={sendMessage} loading={loading} />
         </div>

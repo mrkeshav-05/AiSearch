@@ -8,6 +8,7 @@ import handleVideoSearch from "../../../services/ai/agents/videoSearchAgent";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import type { Embeddings } from "@langchain/core/embeddings";
 import { createLLM, getEmbeddingsInstance } from "../../../config";
+import { getCached, setCached, normalizeQuery } from "../../../services/cache/redis";
 
 const router: Router = express.Router();
 
@@ -71,6 +72,18 @@ const postVideosHandler: express.RequestHandler = async (req, res) => {
     
     // Extract search parameters from request body  
     const { query, history = [] } = req.body;
+    
+    // Check Cache
+    if (query) {
+      const normalizedQ = normalizeQuery(query);
+      const cacheKey = `cache:videos:${normalizedQ}`;
+      const cached = await getCached<any>(cacheKey);
+      if (cached) {
+        console.log("[Videos Route] Returning cached result for", query);
+        res.json(cached);
+        return;
+      }
+    }
     
     console.log("[Videos Route] Query:", query);
     console.log("[Videos Route] History length:", history?.length);
@@ -157,6 +170,10 @@ const postVideosHandler: express.RequestHandler = async (req, res) => {
           model: "gemini-2.0-flash"
         }
       };
+      
+      const normalizedQ = normalizeQuery(query);
+      const cacheKey = `cache:videos:${normalizedQ}`;
+      setCached(cacheKey, successResponse, 21600).catch(console.error); // 6 hours TTL
       
       console.log("[Videos Route] Search completed successfully");
       res.json(successResponse);

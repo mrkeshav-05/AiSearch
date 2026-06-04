@@ -84,10 +84,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
-    localStorage.removeItem("auth_token");
+    try {
+      localStorage.removeItem("auth_token");
+      sessionStorage.clear();
+      // Try to clear any cookies just in case
+      document.cookie.split(";").forEach(function(c) { 
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+      });
+    } catch (e) {
+      console.error(e);
+    }
+    
     setToken(null);
     setUser(null);
-    router.replace("/login");
+    
+    // Aggressive hard reload to wipe Next.js memory
+    setTimeout(() => {
+      window.location.replace("/login");
+    }, 100);
   };
 
   return (

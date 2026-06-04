@@ -9,6 +9,8 @@ import Navbar from "../layout/Navbar";
 import { useChatHistory } from "@/context/ChatHistoryContext";
 import { useChatSession } from "@/context/ChatSessionContext";
 import { useAuth } from "@/context/AuthContext";
+import { type AIStatus } from "./AIStatusBadge";
+
 export type Message = {
   id: string;
   createdAt: Date;
@@ -16,11 +18,10 @@ export type Message = {
   role: "user" | "assistant";
   suggestions?: string[];
   sources?: Document[];
+  aiStatus?: AIStatus;
 };
 
-// We have created a hook custom hoook to connect to the websocket
-// This hook will return the websocket object
-// We are using the useState hook to store the websocket object
+// WebSocket hook
 const useSocket = (url: string) => {
   const [ws, setWs] = useState<WebSocket | null>(null);
 
@@ -28,11 +29,11 @@ const useSocket = (url: string) => {
     if (!ws) {
       const ws = new WebSocket(url);
       ws.onopen = () => {
-        console.log("[DEBUG] open");
+        console.log("[WS] Connected to backend");
         setWs(ws);
       };
+      ws.onerror = (err) => console.error("[WS] Connection error:", err);
     }
-
     return () => {
       ws?.close();
     };
@@ -41,14 +42,12 @@ const useSocket = (url: string) => {
   return ws;
 };
 
-// In this component, we are connecting to the websocket and sending messages
 const ChatWindow = () => {
   const ws = useSocket(process.env.NEXT_PUBLIC_WS_URL!);
   const { saveSession, setCurrentSessionId } = useChatHistory();
   const { activeSession, sessionKey } = useChatSession();
   const { user } = useAuth();
 
-  // Stable session ID — regenerated when sessionKey changes (new chat / history load)
   const sessionIdRef = useRef<string>(crypto.randomUUID());
 
   const [chatHistory, setChatHistory] = useState<[string, string][]>([]);
@@ -59,7 +58,7 @@ const ChatWindow = () => {
   const [focusMode, setFocusMode] = useState("webSearch");
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
-  // When sessionKey changes, reset state (new chat or session loaded)
+  // When sessionKey changes, reset state
   useEffect(() => {
     sessionIdRef.current = crypto.randomUUID();
     if (activeSession) {
@@ -108,6 +107,7 @@ const ChatWindow = () => {
     let sources: Document[] | undefined = undefined;
     let receivedMessage: string = "";
     let added = false;
+    let currentAiStatus: AIStatus | undefined = undefined;
 
     ws?.send(
       JSON.stringify({
@@ -117,7 +117,9 @@ const ChatWindow = () => {
         history: [...chatHistory, ["human", message]],
       })
     );
-    console.log("Sent message to server");
+
+    console.log("[WS] Sent message:", message);
+
     setMessages((prevMessages) => [
       ...prevMessages,
       {
@@ -127,11 +129,32 @@ const ChatWindow = () => {
         createdAt: new Date(),
       },
     ]);
+
     const messageHandler = async (e: MessageEvent) => {
       const data = JSON.parse(e.data);
+
+      // Handle provider status updates
+      if (data.type === "aiStatus") {
+        console.log("[WS] AI Status:", data.status, "| Provider:", data.provider, "| Model:", data.model);
+        currentAiStatus = {
+          status: data.status,
+          provider: data.provider,
+          model: data.model,
+          reason: data.reason,
+        };
+        // Update the last assistant message's status if it exists
+        setMessages((prev) => {
+          const lastAssistant = [...prev].reverse().find((m) => m.role === "assistant");
+          if (lastAssistant) {
+            return prev.map((m) => m.id === lastAssistant.id ? { ...m, aiStatus: currentAiStatus } : m);
+          }
+          return prev;
+        });
+        return;
+      }
+
       if (data.type === "sources") {
         sources = data.data;
-
         if (!added) {
           setMessages((prevMessages) => [
             ...prevMessages,
@@ -140,6 +163,7 @@ const ChatWindow = () => {
               id: data.messageId,
               role: "assistant",
               sources: sources,
+              aiStatus: currentAiStatus,
               createdAt: new Date(),
             },
           ]);
@@ -147,6 +171,7 @@ const ChatWindow = () => {
         }
         setMessageAppeared(true);
       }
+
       if (data.type === "message") {
         if (!added) {
           setMessages((prevMessages) => [
@@ -156,6 +181,7 @@ const ChatWindow = () => {
               id: data.messageId,
               role: "assistant",
               sources: sources,
+              aiStatus: currentAiStatus,
               createdAt: new Date(),
             },
           ]);
@@ -164,10 +190,7 @@ const ChatWindow = () => {
         setMessages((prev) =>
           prev.map((message) => {
             if (message.id == data.messageId) {
-              return {
-                ...message,
-                content: message.content + data.data,
-              };
+              return { ...message, content: message.content + data.data };
             }
             return message;
           })
@@ -175,19 +198,40 @@ const ChatWindow = () => {
         receivedMessage += data.data;
         setMessageAppeared(true);
       }
+
       if (data.type === "messageEnd") {
+        // Prevent huge fallback text (search snippets) from polluting the chat history context
+        const isFallback = currentAiStatus?.status === "rate_limited" || currentAiStatus?.status === "no_credits";
+        const historyMessage = isFallback 
+          ? "[Search results provided directly to user due to AI limits]" 
+          : receivedMessage;
+
         setChatHistory((prevHistory) => [
           ...prevHistory,
           ["human", message],
-          ["assistant", receivedMessage],
+          ["assistant", historyMessage],
         ]);
         ws?.removeEventListener("message", messageHandler);
         setloading(false);
 
+        // Mark final AI status as done
+        const finalStatus: AIStatus = {
+          ...currentAiStatus,
+          status: currentAiStatus?.status === "rate_limited" ? "rate_limited" : "done",
+          provider: currentAiStatus?.provider,
+          model: currentAiStatus?.model,
+        };
+        setMessages((prev) => {
+          const lastAssistant = [...prev].reverse().find((m) => m.role === "assistant");
+          if (lastAssistant) {
+            return prev.map((m) => m.id === lastAssistant.id ? { ...m, aiStatus: finalStatus } : m);
+          }
+          return prev;
+        });
+
         // Fetch suggestions for the last assistant message
         const lastMsg = messagesRef.current[messagesRef.current.length - 1];
-
-        if (lastMsg.role === "assistant" && !lastMsg.suggestions) {
+        if (lastMsg.role === "assistant" && !lastMsg.suggestions && receivedMessage.length > 0) {
           setSuggestionsLoading(true);
           try {
             const suggestions = await getSuggestions(messagesRef.current);
@@ -209,12 +253,13 @@ const ChatWindow = () => {
         }
       }
     };
+
     ws?.addEventListener("message", messageHandler);
   };
 
   const rewrite = (messageId: string) => {
     const index = messages.findIndex((msg) => msg.id === messageId);
-    if(index === -1) return;
+    if (index === -1) return;
     const message = messages[index - 1];
     setMessages((prev) => {
       return [...prev.slice(0, messages.length > 2 ? index - 1 : 0)];
@@ -224,7 +269,7 @@ const ChatWindow = () => {
     });
     sendMessage(message.content);
   };
-  
+
   return (
     <div>
       {messages.length > 0 ? (
@@ -240,7 +285,7 @@ const ChatWindow = () => {
           />
         </>
       ) : (
-        <EmptyChat 
+        <EmptyChat
           sendMessage={sendMessage}
           focusMode={focusMode}
           setFocusMode={setFocusMode}

@@ -6,7 +6,7 @@ import { AIMessage, BaseMessage, HumanMessage } from "@langchain/core/messages";
 import { WebSocket } from "ws";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import type { Embeddings } from "@langchain/core/embeddings";
-import { createLLM, getEmbeddingsInstance } from "../../config";
+import { createLLM, getEmbeddingsInstance, getActiveProviderInfo } from "../../config";
 import handleWebSearch from "../ai/agents/webSearchAgent";
 import handleYouTubeSearch from "../ai/agents/youtubeSearchAgent";
 import handleRedditSearch from "../ai/agents/redditSearchAgent";
@@ -14,11 +14,16 @@ import handleAcademicSearch from "../ai/agents/academicSearchAgent";
 import handleVideoSearch from "../ai/agents/videoSearchAgent";
 import handleWritingAssistant from "../ai/agents/writingAssistant";
 import basicPinterestSearch from "../ai/agents/pinterestSearchAgent";
+import { getCached, setCached, normalizeQuery } from "../../services/cache/redis";
 
 // Instantiate the active LLM and embeddings using the central factory.
 // Provider selection is automatic: OpenAI → Grok → Google Gemini.
 const llm: BaseChatModel = createLLM();
 const embeddings: Embeddings = getEmbeddingsInstance();
+
+// Log active provider at module load time for easy debugging
+const providerInfo = getActiveProviderInfo();
+console.log(`[MessageHandler] Active provider: ${providerInfo.providerName} | Model: ${providerInfo.model} | Key env: ${providerInfo.providerKey}`);
 
 
 /**
@@ -108,10 +113,54 @@ export const handleMessage = async (message: string, ws: WebSocket) => {
     // Process message based on type
     if(paresedMessage.type === "message"){
       const focusMode = paresedMessage.focusMode || "webSearch"
+      const normalizedQ = normalizeQuery(paresedMessage.message);
+      const cacheKey = `cache:${focusMode}:${normalizedQ}`;
+
+      // Check Cache
+      const cached = await getCached<any>(cacheKey);
+      if (cached) {
+        if (cached.aiStatus) ws.send(JSON.stringify({ ...cached.aiStatus, messageId: id }));
+        if (cached.sources) ws.send(JSON.stringify({ type: "sources", data: cached.sources, messageId: id }));
+        if (cached.response) ws.send(JSON.stringify({ type: "message", data: cached.response, messageId: id }));
+        ws.send(JSON.stringify({ type: "messageEnd", messageId: id }));
+        return;
+      }
+
+      // Intercept ws.send to cache the final output
+      const originalSend = ws.send.bind(ws);
+      let cacheData = { response: "", sources: null, aiStatus: null };
       
+      ws.send = (dataStr: any, cb?: any) => {
+        try {
+          const parsed = JSON.parse(dataStr.toString());
+          if (parsed.type === "message") cacheData.response += parsed.data;
+          else if (parsed.type === "sources") cacheData.sources = parsed.data;
+          else if (parsed.type === "aiStatus") cacheData.aiStatus = parsed;
+          else if (parsed.type === "messageEnd") {
+            setCached(cacheKey, cacheData, 3600); // 1 hour TTL
+          }
+        } catch (e) {
+          // ignore parse errors
+        }
+        return originalSend(dataStr, cb);
+      };
+
       // Route to appropriate agent based on focus mode
       switch(focusMode){
         case "webSearch":{
+          const { providerName, model } = getActiveProviderInfo();
+          console.log(`[WebSearch] Provider: ${providerName} | Model: ${model}`);
+          console.log(`[WebSearch] Query: "${paresedMessage.message}"`);
+
+          // Notify frontend which provider is being used
+          ws.send(JSON.stringify({
+            type: "aiStatus",
+            status: "generating",
+            provider: providerName,
+            model,
+            messageId: id,
+          }));
+
           // Initialize web search agent with user query and conversation history
           const emitter = handleWebSearch(paresedMessage.message, history, llm, embeddings);
           
@@ -139,14 +188,26 @@ export const handleMessage = async (message: string, ws: WebSocket) => {
                 })
               )
             }
+            // Forward aiStatus events (e.g., fallback/rate-limited) to frontend
+            else if(paresedData.type === "aiStatus"){
+              ws.send(
+                JSON.stringify({
+                  type: "aiStatus",
+                  ...paresedData,
+                  messageId: id,
+                })
+              )
+            }
           })
 
           emitter.on("end", () => {
+            console.log(`[WebSearch] Completed for: "${paresedMessage.message}"`);
             ws.send(JSON.stringify({type: "messageEnd", messageId: id}))
           })
           
           emitter.on("error", (data) => {
             const paresedData = JSON.parse(data);
+            console.error(`[WebSearch] Error:`, paresedData.data);
             ws.send(JSON.stringify({type: "error", data: paresedData.data}))
           })
           break;

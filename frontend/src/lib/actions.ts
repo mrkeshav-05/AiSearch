@@ -2,7 +2,8 @@ import { Message } from "@/components/chat/ChatWindow";
 
 export const getSuggestions = async (chatHistory: Message[]) => {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL_V1}/suggestions`, {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL_V1 || `${process.env.NEXT_PUBLIC_API_URL}/v1`;
+    const res = await fetch(`${apiUrl}/suggestions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -16,7 +17,8 @@ export const getSuggestions = async (chatHistory: Message[]) => {
     });
 
     if (!res.ok) {
-      throw new Error(`Failed to fetch suggestions: ${res.status}`);
+      console.warn(`Failed to fetch suggestions: ${res.status}`);
+      return [];
     }
 
     const data = (await res.json()) as { suggestions: string[] };

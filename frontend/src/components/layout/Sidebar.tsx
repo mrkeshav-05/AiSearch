@@ -145,7 +145,9 @@ function ProfileMenu({
       <div className="border-t border-[#2C2C2C] my-1" />
 
       <button
-        onClick={() => { onLogout(); onClose(); }}
+        onClick={() => { 
+          onLogout(); 
+        }}
         className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
       >
         <LogOut size={15} />

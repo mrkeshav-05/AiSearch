@@ -5,6 +5,7 @@
 import express, { Router } from 'express';
 import { BaseMessage, HumanMessage, AIMessage } from '@langchain/core/messages';
 import imageSearchChain from '../../../services/ai/agents/imageSearchAgent';
+import { getCached, setCached, normalizeQuery } from '../../../services/cache/redis';
 
 // Create router instance for image-specific routes
 export const router: Router = express.Router();
@@ -48,6 +49,15 @@ router.post("/", async (req, res) => {
     // Extract search parameters from request body
     const {query, chat_history} = req.body;
 
+    const normalizedQ = normalizeQuery(query);
+    const cacheKey = `cache:images:${normalizedQ}`;
+
+    const cachedImages = await getCached<any[]>(cacheKey);
+    if (cachedImages) {
+      res.status(200).json({ images: cachedImages });
+      return;
+    }
+
     console.log("[Images Route] Query:", query);
     console.log("[Images Route] Chat history type:", typeof chat_history, "Length:", chat_history?.length);
 
@@ -83,6 +93,10 @@ router.post("/", async (req, res) => {
       query,
     })
     
+    if (images && images.length > 0) {
+      await setCached(cacheKey, images, 21600); // 6 hours
+    }
+
     console.log("[Images Route] Search completed, returning", images?.length || 0, "images");
     
     // Return successful response with image results

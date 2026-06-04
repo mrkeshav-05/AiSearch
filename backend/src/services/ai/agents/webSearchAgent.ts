@@ -24,7 +24,8 @@ import type { Embeddings } from "@langchain/core/embeddings";
 import formatChatHistoryAsString from "../../../utils/formateHistory";
 import { EventEmitter } from "events";
 import computeSimilarity from "../../../utils/computeSimilarity";
-import { isQuotaExceededError, fallbackWebSearch, isQuotaCurrentlyExhausted } from "./fallbackHandler";
+import { isQuotaExceededError, fallbackWebSearch, isQuotaCurrentlyExhausted, parseAIError } from "./fallbackHandler";
+import { getActiveProviderInfo } from "../../../config";
 
 
 
@@ -352,8 +353,9 @@ const basicWebSearch = (
 
   // Check if quota is already known to be exhausted - skip AI immediately
   if (isQuotaCurrentlyExhausted()) {
+    const providerInfo = getActiveProviderInfo();
     console.log('[WebSearch] Quota known to be exhausted, using fallback immediately');
-    const fallbackEmitter = fallbackWebSearch(query);
+    const fallbackEmitter = fallbackWebSearch(query, providerInfo.providerName, 'RATE_LIMITED');
     fallbackEmitter.on("data", (data) => emitter.emit("data", data));
     fallbackEmitter.on("end", () => emitter.emit("end"));
     fallbackEmitter.on("error", (error) => emitter.emit("error", error));
@@ -377,12 +379,13 @@ const basicWebSearch = (
     );
 
     handleStream(stream, emitter).catch((err) => {
-      // Check if this is a quota exceeded error
-      if (isQuotaExceededError(err)) {
-        console.log('[WebSearch] AI quota exceeded, falling back to direct SearXNG search');
-        const fallbackEmitter = fallbackWebSearch(query);
+      const providerInfo = getActiveProviderInfo();
+      const parsedError = parseAIError(err, providerInfo.providerName);
+      
+      if (parsedError.isQuotaError) {
+        console.log(`[WebSearch] AI quota/credits exceeded (${parsedError.type}), falling back to direct SearXNG search`);
+        const fallbackEmitter = fallbackWebSearch(query, providerInfo.providerName, parsedError.type);
         
-        // Forward all events from fallback emitter
         fallbackEmitter.on("data", (data) => emitter.emit("data", data));
         fallbackEmitter.on("end", () => emitter.emit("end"));
         fallbackEmitter.on("error", (error) => emitter.emit("error", error));
@@ -396,12 +399,13 @@ const basicWebSearch = (
       }
     });
   } catch (err: any) {
-    // Check if this is a quota exceeded error
-    if (isQuotaExceededError(err)) {
-      console.log('[WebSearch] AI quota exceeded, falling back to direct SearXNG search');
-      const fallbackEmitter = fallbackWebSearch(query);
+    const providerInfo = getActiveProviderInfo();
+    const parsedError = parseAIError(err, providerInfo.providerName);
+    
+    if (parsedError.isQuotaError) {
+      console.log(`[WebSearch] AI quota/credits exceeded (${parsedError.type}), falling back to direct SearXNG search`);
+      const fallbackEmitter = fallbackWebSearch(query, providerInfo.providerName, parsedError.type);
       
-      // Forward all events from fallback emitter
       fallbackEmitter.on("data", (data) => emitter.emit("data", data));
       fallbackEmitter.on("end", () => emitter.emit("end"));
       fallbackEmitter.on("error", (error) => emitter.emit("error", error));

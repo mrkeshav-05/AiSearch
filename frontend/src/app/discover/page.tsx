@@ -10,7 +10,7 @@ import Image from "next/image";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { useChatHistory } from "@/context/ChatHistoryContext";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL_V1 ?? "http://localhost:8000/api/v1";
 
 type SearchResult = {
   title: string;
@@ -309,7 +309,7 @@ function DiscoverInner() {
     try {
       const token = localStorage.getItem("auth_token");
       const res = await fetch(
-        `${API_BASE}/api/v1/search/web?q=${encodeURIComponent(q)}&category=${cat}&page=${pg}`,
+        `${API_BASE}/search/web?q=${encodeURIComponent(q)}&category=${cat}&page=${pg}`,
         { headers: token ? { Authorization: `Bearer ${token}` } : {} }
       );
       if (!res.ok) throw new Error("Search failed");

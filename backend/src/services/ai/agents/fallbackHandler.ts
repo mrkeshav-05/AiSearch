@@ -127,93 +127,111 @@ export const checkApiHealth = async (): Promise<boolean> => {
   }
 };
 
+export type AIErrorType = 'RATE_LIMITED' | 'NO_CREDITS' | 'INVALID_KEY' | 'MODEL_ACCESS_DENIED' | 'NETWORK_ERROR' | 'UNKNOWN';
+
+export interface ParsedAIError {
+  isQuotaError: boolean;
+  type: AIErrorType;
+  message: string;
+}
+
 /**
- * Check if an error is a quota exceeded error (429)
- * Works for both Google Gemini and OpenAI APIs
+ * Parses an AI provider error to determine its exact type and log details.
  */
-export const isQuotaExceededError = (error: unknown): boolean => {
-  if (!error) return false;
+export const parseAIError = (error: unknown, providerName: string = "AI"): ParsedAIError => {
+  if (!error) return { isQuotaError: false, type: 'UNKNOWN', message: 'Unknown error' };
   
-  const err = error as Record<string, unknown>;
+  const err = error as any;
+  const status = err.status || err.statusCode || err?.response?.status;
+  const errorMessage = (typeof err.message === 'string' ? err.message : JSON.stringify(err)).toLowerCase();
   
-  // Check for HTTP 429 status
-  if (err.status === 429 || err.statusCode === 429) {
-    markQuotaExhausted(); // Cache this for future requests
-    return true;
+  // Detailed logging as requested
+  console.log(`[LLM Error] Provider: ${providerName} | Status: ${status || 'N/A'}`);
+  console.log(`[LLM Error] Body:`, err?.response?.data || errorMessage);
+
+  // 1. NO_CREDITS (Billing / License)
+  if (
+    status === 403 || 
+    errorMessage.includes('no credits') || 
+    errorMessage.includes('insufficient_credits') || 
+    errorMessage.includes("doesn't have any credits") ||
+    errorMessage.includes('purchase')
+  ) {
+    return { isQuotaError: true, type: 'NO_CREDITS', message: "No active credits or license found." };
   }
-  
-  // Check error message patterns
-  const errorMessage = (typeof err.message === 'string' ? err.message : '').toLowerCase();
-  const quotaPatterns = [
-    'quota exceeded',
-    'rate limit',
-    'too many requests',
-    '429',
-    'resource_exhausted',
-    'quota_exceeded'
-  ];
-  
-  const isQuotaError = quotaPatterns.some(pattern => errorMessage.includes(pattern));
-  if (isQuotaError) {
-    markQuotaExhausted(); // Cache this for future requests
+
+  // 2. RATE_LIMITED
+  if (
+    status === 429 || 
+    errorMessage.includes('quota exceeded') || 
+    errorMessage.includes('rate limit') || 
+    errorMessage.includes('too many requests') || 
+    errorMessage.includes('resource_exhausted') || 
+    errorMessage.includes('quota_exceeded')
+  ) {
+    return { isQuotaError: true, type: 'RATE_LIMITED', message: "API quota or rate limit exceeded." };
   }
-  
-  return isQuotaError;
+
+  // 3. INVALID_KEY
+  if (status === 401 || errorMessage.includes('invalid api key') || errorMessage.includes('invalid_api_key')) {
+    return { isQuotaError: false, type: 'INVALID_KEY', message: "Invalid API key provided." };
+  }
+
+  // 4. MODEL_ACCESS_DENIED
+  if (errorMessage.includes('model_not_found') || errorMessage.includes('does not have access to model')) {
+    return { isQuotaError: false, type: 'MODEL_ACCESS_DENIED', message: "Access to the requested model is denied." };
+  }
+
+  // 5. NETWORK_ERROR
+  if (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT' || errorMessage.includes('network error')) {
+    return { isQuotaError: false, type: 'NETWORK_ERROR', message: "Network connection failed." };
+  }
+
+  return { isQuotaError: false, type: 'UNKNOWN', message: errorMessage };
 };
 
 /**
- * Generate a simple response from search results without AI
- * Creates a formatted list of search results for the user
+ * Legacy wrapper for backward compatibility with agents that don't need detailed parsed errors.
  */
-const generateFallbackResponse = (query: string, docs: Document[]): string => {
-  if (docs.length === 0) {
-    return `I couldn't find any results for "${query}". Please try a different search query.`;
+export const isQuotaExceededError = (error: unknown): boolean => {
+  const parsed = parseAIError(error, "Unknown");
+  if (parsed.isQuotaError) {
+    markQuotaExhausted();
   }
-
-  let response = `⚠️ **AI service temporarily unavailable due to API limits.**\n\n`;
-  response += `Here are the search results for "${query}":\n\n`;
-  
-  docs.slice(0, 10).forEach((doc: Document, index: number) => {
-    const title = (doc.metadata?.title as string) || 'Untitled';
-    const url = (doc.metadata?.url as string) || '';
-    const content = doc.pageContent?.substring(0, 200) || 'No description available';
-    
-    response += `**${index + 1}. ${title}**\n`;
-    if (content) {
-      response += `${content}${content.length >= 200 ? '...' : ''}\n`;
-    }
-    if (url) {
-      response += `🔗 [Read more](${url})\n`;
-    }
-    response += '\n';
-  });
-
-  response += `\n---\n*💡 Tip: AI summarization is temporarily unavailable. These are raw search results from SearXNG.*`;
-  
-  return response;
+  return parsed.isQuotaError;
 };
 
 /**
  * Fallback web search - Returns SearXNG results directly without AI processing
- * Used when AI quota is exceeded
- * 
- * @param query - User's search query
- * @returns EventEmitter that emits search results and completion events
  */
-export const fallbackWebSearch = (query: string): EventEmitter => {
+export const fallbackWebSearch = (
+  query: string, 
+  providerName = "AI",
+  errorType: AIErrorType = 'RATE_LIMITED'
+): EventEmitter => {
   const emitter = new EventEmitter();
 
-  (async () => {
+  setImmediate(async () => {
     try {
-      console.log('[FALLBACK] Performing direct SearXNG search for:', query);
-      
-      // Execute web search using SearxNG
-      const res = await searchSearxng(query, {
-        language: "en",
-      });
+      console.log(`[FALLBACK] Provider "${providerName}" failed (${errorType}). Performing direct SearXNG search for: "${query}"`);
 
-      // Convert search results to LangChain Document format
-      const documents = res.results.map(
+      const statusType = errorType === 'NO_CREDITS' ? 'no_credits' : 'rate_limited';
+      const reasonText = errorType === 'NO_CREDITS' 
+        ? "No active credits or license found" 
+        : "API quota exhausted";
+
+      // Emit AI status so the frontend can show the provider badge
+      emitter.emit("data", JSON.stringify({
+        type: "aiStatus",
+        status: statusType,
+        provider: providerName,
+        reason: `${reasonText} — showing search results only`,
+      }));
+
+      // Execute web search using SearxNG
+      const res = await searchSearxng(query, { language: "en" });
+
+      const documents = res.results.slice(0, 15).map(
         (result: SearxngSearchResult) =>
           new Document({
             pageContent: result.content || "",
@@ -225,39 +243,47 @@ export const fallbackWebSearch = (query: string): EventEmitter => {
           })
       );
 
-      console.log('[FALLBACK] Found', documents.length, 'results');
+      console.log(`[FALLBACK] Found ${documents.length} results for "${query}"`);
 
-      // Emit sources first
-      emitter.emit(
-        "data",
-        JSON.stringify({ type: "sources", data: documents })
-      );
+      emitter.emit("data", JSON.stringify({ type: "sources", data: documents }));
 
-      // Generate and emit fallback response
-      const response = generateFallbackResponse(query, documents);
-      
-      // Emit response in chunks to simulate streaming
-      const chunks = response.split('\n');
-      for (const chunk of chunks) {
-        emitter.emit(
-          "data",
-          JSON.stringify({ type: "response", data: chunk + '\n' })
-        );
-        // Small delay to simulate streaming
-        await new Promise(resolve => setTimeout(resolve, 10));
+      if (documents.length > 0) {
+        const titleText = errorType === 'NO_CREDITS'
+          ? `⚠️ **${providerName} unavailable: No active credits or license found.** — displaying direct search results for _"${query}"_.`
+          : `⚠️ **AI quota temporarily exhausted** — displaying direct search results for _"${query}"_.`;
+
+        let response = `${titleText}\n\n`;
+        
+        documents.slice(0, 8).forEach((doc: Document, index: number) => {
+          response += `**${index + 1}. ${doc.metadata?.title || 'Untitled'}**\n`;
+          if (doc.pageContent) {
+            // limit snippet length to keep it clean
+            response += `${doc.pageContent.substring(0, 250)}...\n`;
+          }
+          response += `🔗 [Read more](${doc.metadata?.url || '#'})\n\n`;
+        });
+        
+        if (errorType !== 'NO_CREDITS') {
+          response += `_AI-generated summaries will resume automatically when the quota resets (~5 minutes)._`;
+        }
+
+        for (const chunk of response.split('\n')) {
+          emitter.emit("data", JSON.stringify({ type: "response", data: chunk + '\n' }));
+        }
+      } else {
+        emitter.emit("data", JSON.stringify({
+          type: "response",
+          data: `⚠️ **AI quota temporarily exhausted** and no search results were found for _"${query}"_. Please try again shortly.\n`,
+        }));
       }
 
-      // Emit end event
       emitter.emit("end");
 
     } catch (error) {
       console.error('[FALLBACK] Search error:', error);
-      emitter.emit(
-        "error",
-        JSON.stringify({ data: "Fallback search failed. Please try again later." })
-      );
+      emitter.emit("error", JSON.stringify({ data: "Fallback search failed. Please try again later." }));
     }
-  })();
+  });
 
   return emitter;
 };
@@ -265,13 +291,21 @@ export const fallbackWebSearch = (query: string): EventEmitter => {
 /**
  * Fallback YouTube search - Returns SearXNG YouTube results directly
  */
-export const fallbackYouTubeSearch = (query: string): EventEmitter => {
+export const fallbackYouTubeSearch = (query: string, providerName = "AI"): EventEmitter => {
   const emitter = new EventEmitter();
 
-  (async () => {
+  // setImmediate defers until listeners are attached (fixes aiStatus race condition)
+  setImmediate(async () => {
     try {
-      console.log('[FALLBACK] Performing direct YouTube search for:', query);
-      
+      console.log(`[FALLBACK] Provider "${providerName}" rate-limited. Performing direct YouTube search for: "${query}"`);
+
+      emitter.emit("data", JSON.stringify({
+        type: "aiStatus",
+        status: "rate_limited",
+        provider: providerName,
+        reason: "API quota exhausted — showing search results only",
+      }));
+
       const res = await searchSearxng(query, {
         engines: ['youtube'],
         language: "en",
@@ -291,29 +325,14 @@ export const fallbackYouTubeSearch = (query: string): EventEmitter => {
           })
       );
 
+      console.log(`[FALLBACK] Found ${documents.length} YouTube results`);
       emitter.emit("data", JSON.stringify({ type: "sources", data: documents }));
-
-      let response = `⚠️ **AI service temporarily unavailable.**\n\n`;
-      response += `Here are YouTube videos for "${query}":\n\n`;
-      
-      documents.slice(0, 8).forEach((doc: Document, index: number) => {
-        response += `**${index + 1}. ${doc.metadata?.title || 'Untitled'}**\n`;
-        response += `🔗 [Watch Video](${doc.metadata?.url || '#'})\n\n`;
-      });
-
-      response += `\n*💡 AI summarization unavailable. Showing direct YouTube results.*`;
-
-      for (const chunk of response.split('\n')) {
-        emitter.emit("data", JSON.stringify({ type: "response", data: chunk + '\n' }));
-        await new Promise(resolve => setTimeout(resolve, 10));
-      }
-
       emitter.emit("end");
     } catch (error) {
       console.error('[FALLBACK] YouTube search error:', error);
       emitter.emit("error", JSON.stringify({ data: "Fallback YouTube search failed." }));
     }
-  })();
+  });
 
   return emitter;
 };
@@ -321,51 +340,38 @@ export const fallbackYouTubeSearch = (query: string): EventEmitter => {
 /**
  * Fallback Reddit search
  */
-export const fallbackRedditSearch = (query: string): EventEmitter => {
+export const fallbackRedditSearch = (query: string, providerName = "AI"): EventEmitter => {
   const emitter = new EventEmitter();
 
-  (async () => {
+  // setImmediate defers until listeners are attached (fixes aiStatus race condition)
+  setImmediate(async () => {
     try {
-      console.log('[FALLBACK] Performing direct Reddit search for:', query);
-      
-      const res = await searchSearxng(`${query} site:reddit.com`, {
-        language: "en",
-      });
+      console.log(`[FALLBACK] Provider "${providerName}" rate-limited. Performing direct Reddit search for: "${query}"`);
+
+      emitter.emit("data", JSON.stringify({
+        type: "aiStatus",
+        status: "rate_limited",
+        provider: providerName,
+        reason: "API quota exhausted — showing search results only",
+      }));
+
+      const res = await searchSearxng(`${query} site:reddit.com`, { language: "en" });
 
       const documents = res.results.map(
         (result: SearxngSearchResult) =>
           new Document({
             pageContent: result.content || "",
-            metadata: {
-              title: result.title,
-              url: result.url,
-            },
+            metadata: { title: result.title, url: result.url },
           })
       );
 
+      console.log(`[FALLBACK] Found ${documents.length} Reddit results`);
       emitter.emit("data", JSON.stringify({ type: "sources", data: documents }));
-
-      let response = `⚠️ **AI service temporarily unavailable.**\n\n`;
-      response += `Here are Reddit discussions for "${query}":\n\n`;
-      
-      documents.slice(0, 8).forEach((doc: Document, index: number) => {
-        response += `**${index + 1}. ${doc.metadata?.title || 'Untitled'}**\n`;
-        if (doc.pageContent) {
-          response += `${doc.pageContent.substring(0, 150)}...\n`;
-        }
-        response += `🔗 [View on Reddit](${doc.metadata?.url || '#'})\n\n`;
-      });
-
-      for (const chunk of response.split('\n')) {
-        emitter.emit("data", JSON.stringify({ type: "response", data: chunk + '\n' }));
-        await new Promise(resolve => setTimeout(resolve, 10));
-      }
-
       emitter.emit("end");
     } catch (error) {
       emitter.emit("error", JSON.stringify({ data: "Fallback Reddit search failed." }));
     }
-  })();
+  });
 
   return emitter;
 };
