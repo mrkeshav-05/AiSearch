@@ -195,6 +195,23 @@ pnpm run test:frontend
 pnpm run test:coverage
 ```
 
+## Images & Sceenshots
+
+### Search With Ai Features
+<img width="1440" height="900" alt="Screenshot 2026-06-20 at 2 44 21 AM" src="https://github.com/user-attachments/assets/0abc0cbe-1715-4cfd-9c9d-36ad1a57132d" />
+<img width="1440" height="900" alt="Screenshot 2026-06-20 at 2 44 42 AM" src="https://github.com/user-attachments/assets/b71a7211-da3f-4a40-906b-1f116ba1b8c1" />
+<img width="1440" height="900" alt="Screenshot 2026-06-20 at 2 45 01 AM" src="https://github.com/user-attachments/assets/6835b5d9-c973-46ef-8b83-dbb38978ff69" />
+
+### Search With Searxng
+<img width="1440" height="900" alt="Screenshot 2026-06-20 at 2 46 06 AM" src="https://github.com/user-attachments/assets/e792a38b-88a0-4770-89df-37825618603a" />
+<img width="1440" height="900" alt="Screenshot 2026-06-20 at 2 46 06 AM" src="https://github.com/user-attachments/assets/54b84852-d8a0-437d-8ea8-d87d3eb2eb56" />
+<img width="1440" height="900" alt="Screenshot 2026-06-20 at 2 46 27 AM" src="https://github.com/user-attachments/assets/bd185542-fa64-4321-a1a2-df6f9d89983a" />
+
+### Chat With PDF
+<img width="1440" height="900" alt="Screenshot 2026-06-20 at 2 48 15 AM" src="https://github.com/user-attachments/assets/dc60bcae-ff7a-45df-883f-b74344b312f8" />
+<img width="1440" height="900" alt="Screenshot 2026-06-20 at 2 48 40 AM" src="https://github.com/user-attachments/assets/015fba33-7a70-4993-b43d-ecad0b611942" />
+
+
 ## 📖 Documentation
 
 - [**Development Setup**](docs/development/setup.md) - Detailed setup instructions
