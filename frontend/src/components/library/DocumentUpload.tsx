@@ -114,6 +114,7 @@ export default function DocumentUpload({ onUploaded }: DocumentUploadProps) {
         accept="application/pdf"
         className="sr-only"
         onChange={handleChange}
+        onClick={(e) => e.stopPropagation()}
         disabled={uploading}
       />
 

@@ -1,0 +1,40 @@
+{
+  "family": "aisearch-frontend-free",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::<YOUR_ACCOUNT_ID>:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::<YOUR_ACCOUNT_ID>:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "frontend",
+      "image": "<YOUR_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/aisearch/frontend:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "name": "frontend",
+          "containerPort": 3000,
+          "hostPort": 3000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        { "name": "NODE_ENV", "value": "production" },
+        { "name": "NEXT_PUBLIC_API_URL", "value": "http://<BACKEND_PUBLIC_IP>:8000" },
+        { "name": "NEXT_PUBLIC_WS_URL", "value": "ws://<BACKEND_PUBLIC_IP>:8000" },
+        { "name": "NEXT_PUBLIC_APP_URL", "value": "http://localhost:3000" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/aisearch-frontend",
+          "awslogs-region": "<AWS_REGION>",
+          "awslogs-stream-prefix": "frontend"
+        }
+      }
+    }
+  ]
+}

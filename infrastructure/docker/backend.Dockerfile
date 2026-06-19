@@ -31,8 +31,8 @@ RUN pnpm --filter @aisearch/backend run build
 # Production stage
 FROM node:18-alpine AS production
 
-# Install pnpm
-RUN npm install -g pnpm
+# Install pnpm and curl for health check
+RUN apk add --no-cache curl && npm install -g pnpm
 
 WORKDIR /app
 

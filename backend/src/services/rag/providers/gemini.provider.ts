@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { OpenAIEmbeddingProvider } from './openai.provider';
 import type { EmbeddingProvider } from './embedding.interface';
 import type { LLMProvider, ChatMessage, LLMOptions, StreamChunk } from './llm.interface';
 
@@ -25,12 +26,39 @@ export class GeminiEmbeddingProvider implements EmbeddingProvider {
   }
 
   async embedBatch(texts: string[]): Promise<number[][]> {
-    // Gemini supports batch embedding
     const model = this.client.getGenerativeModel({ model: this.model });
-    const result = await model.batchEmbedContents({
-      requests: texts.map((t) => ({ content: { role: 'user', parts: [{ text: t }] } })),
-    });
-    return result.embeddings.map((e) => e.values);
+    
+    try {
+      // Primary attempt: Native Batch API
+      const result = await model.batchEmbedContents({
+        requests: texts.map((t) => ({ content: { role: 'user', parts: [{ text: t }] } })),
+      });
+      return result.embeddings.map((e) => e.values);
+    } catch (error: any) {
+      console.warn(`[GeminiEmbeddingProvider] batchEmbedContents failed (${error.message}). Attempting sequential fallback...`);
+      
+      try {
+        // Fallback 1: Sequential Embedding via embedContent (slower but bypasses v1beta batch issues)
+        const embeddings: number[][] = [];
+        for (const text of texts) {
+          const result = await model.embedContent(text);
+          embeddings.push(result.embedding.values);
+        }
+        return embeddings;
+      } catch (seqError: any) {
+        console.warn(`[GeminiEmbeddingProvider] Sequential fallback also failed (${seqError.message}). Attempting cross-provider fallback...`);
+        
+        // Fallback 2: Cross-provider fallback to OpenAI if configured
+        if (process.env.OPENAI_API_KEY) {
+          console.log('[GeminiEmbeddingProvider] Delegating to OpenAIEmbeddingProvider as final fallback.');
+          const fallbackProvider = new OpenAIEmbeddingProvider();
+          return await fallbackProvider.embedBatch(texts);
+        }
+        
+        // If no fallback is available, throw a clear error
+        throw new Error(`All embedding strategies failed for Gemini. Last error: ${seqError.message}`);
+      }
+    }
   }
 }
 

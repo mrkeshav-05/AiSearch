@@ -277,6 +277,66 @@ function SuggestionChips({ items, onSelect }: { items: string[]; onSelect: (s: s
   );
 }
 
+// Shared search form — rendered in hero (landing) or sticky header (results)
+function SearchForm({
+  compact,
+  draft,
+  setDraft,
+  handleSubmit,
+  inputRef,
+  query,
+}: {
+  compact?: boolean;
+  draft: string;
+  setDraft: (v: string) => void;
+  handleSubmit: (e: React.FormEvent) => void;
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  query: string;
+}) {
+  return (
+    <form onSubmit={handleSubmit} className="flex items-center gap-2 w-full">
+      <div className="relative flex-1">
+        <Search
+          size={compact ? 14 : 16}
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none"
+        />
+        <input
+          ref={compact ? undefined : inputRef}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder="Search anything…"
+          autoFocus={!query && !compact}
+          className={`w-full bg-[#141414] border border-[#222] rounded-2xl pl-11 pr-10 text-white placeholder-white/25 focus:outline-none focus:border-[#24A0ED]/60 focus:bg-[#161b22] transition-all duration-200 ${
+            compact ? "py-2 text-sm" : "py-3.5 text-base"
+          }`}
+        />
+        {draft && (
+          <button
+            type="button"
+            onClick={() => {
+              setDraft("");
+              if (!compact) {
+                inputRef.current?.focus();
+              }
+            }}
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/70 transition-colors"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
+      <button
+        type="submit"
+        className={`shrink-0 bg-[#24A0ED] hover:bg-[#3bb0f5] text-white font-semibold rounded-2xl transition-all duration-150 active:scale-95 shadow-lg shadow-[#24A0ED]/20 ${
+          compact ? "px-4 py-2 text-sm" : "px-6 py-3.5 text-sm"
+        }`}
+      >
+        Search
+      </button>
+    </form>
+  );
+}
+
 function DiscoverInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -374,46 +434,7 @@ function DiscoverInner() {
 
   const hasResults = results.length > 0;
 
-  // Shared search form — rendered in hero (landing) or sticky header (results)
-  function SearchForm({ compact }: { compact?: boolean }) {
-    return (
-      <form onSubmit={handleSubmit} className="flex items-center gap-2 w-full">
-        <div className="relative flex-1">
-          <Search
-            size={compact ? 14 : 16}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none"
-          />
-          <input
-            ref={compact ? undefined : inputRef}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder="Search anything…"
-            autoFocus={!query && !compact}
-            className={`w-full bg-[#141414] border border-[#222] rounded-2xl pl-11 pr-10 text-white placeholder-white/25 focus:outline-none focus:border-[#24A0ED]/60 focus:bg-[#161b22] transition-all duration-200 ${
-              compact ? "py-2 text-sm" : "py-3.5 text-base"
-            }`}
-          />
-          {draft && (
-            <button
-              type="button"
-              onClick={() => { setDraft(""); inputRef.current?.focus(); }}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/70 transition-colors"
-            >
-              <X size={14} />
-            </button>
-          )}
-        </div>
-        <button
-          type="submit"
-          className={`shrink-0 bg-[#24A0ED] hover:bg-[#3bb0f5] text-white font-semibold rounded-2xl transition-all duration-150 active:scale-95 shadow-lg shadow-[#24A0ED]/20 ${
-            compact ? "px-4 py-2 text-sm" : "px-6 py-3.5 text-sm"
-          }`}
-        >
-          Search
-        </button>
-      </form>
-    );
-  }
+
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-white">
@@ -422,7 +443,14 @@ function DiscoverInner() {
       {(query || loading) && (
         <div className="sticky top-0 z-20 bg-[#0A0A0A]/80 backdrop-blur-md border-b border-white/[0.06]">
           <div className="max-w-3xl mx-auto px-4 py-3 space-y-2">
-            <SearchForm compact />
+            <SearchForm
+              compact
+              draft={draft}
+              setDraft={setDraft}
+              handleSubmit={handleSubmit}
+              inputRef={inputRef}
+              query={query}
+            />
             <div className="flex items-center gap-1">
               {CATEGORIES.map((c) => (
                 <button
@@ -464,7 +492,13 @@ function DiscoverInner() {
                 Search the web, your way
               </h1>
               <div className="w-full max-w-xl">
-                <SearchForm />
+                <SearchForm
+                  draft={draft}
+                  setDraft={setDraft}
+                  handleSubmit={handleSubmit}
+                  inputRef={inputRef}
+                  query={query}
+                />
               </div>
             </div>
             <LandingState onSearch={(q) => pushSearch(q, "general", 1)} />

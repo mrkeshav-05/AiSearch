@@ -18,6 +18,19 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    container_name: redis
+    image: redis:alpine
+    ports:
+      - 6379:6379
+    networks:
+      - AiSearch
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   searxng:
     container_name: searxng
     image: searxng
@@ -49,6 +62,7 @@ services:
       - SEARXNG_API_URL=http://searxng:8080
       - BACKEND_PORT=8000
       - DATABASE_URL=postgresql://aisearch:aisearch@postgres:5432/aisearch
+      - REDIS_URL=redis://redis:6379
       - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
@@ -64,6 +78,7 @@ services:
     volumes:
       - uploads_data:/app/uploads
     depends_on:
+        - redis
         - searxng
         - postgres
     expose:

@@ -47,8 +47,8 @@ RUN pnpm --filter @aisearch/frontend run build
 # Production stage
 FROM node:18-alpine AS production
 
-# Install pnpm
-RUN npm install -g pnpm
+# Install pnpm and curl for health check
+RUN apk add --no-cache curl && npm install -g pnpm
 
 WORKDIR /app
 
@@ -69,7 +69,7 @@ EXPOSE 3000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:3000/api/health || exit 1
+  CMD curl -f http://localhost:3000 || exit 1
 
 # Start the application
 CMD ["pnpm", "run", "start:frontend"]

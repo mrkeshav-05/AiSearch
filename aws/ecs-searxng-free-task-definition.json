@@ -1,0 +1,37 @@
+{
+  "family": "aisearch-searxng-free",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::<YOUR_ACCOUNT_ID>:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::<YOUR_ACCOUNT_ID>:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "searxng",
+      "image": "<YOUR_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/aisearch/searxng:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "name": "searxng",
+          "containerPort": 8080,
+          "hostPort": 8080,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        { "name": "SEARXNG_BASE_URL", "value": "http://searxng.aisearch.local:8080/" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/aisearch-searxng",
+          "awslogs-region": "<AWS_REGION>",
+          "awslogs-stream-prefix": "searxng"
+        }
+      }
+    }
+  ]
+}

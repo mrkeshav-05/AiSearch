@@ -1,0 +1,52 @@
+{
+  "family": "aisearch-backend-free",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::<YOUR_ACCOUNT_ID>:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::<YOUR_ACCOUNT_ID>:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "backend",
+      "image": "<YOUR_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/aisearch/backend:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "name": "backend",
+          "containerPort": 8000,
+          "hostPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        { "name": "NODE_ENV", "value": "production" },
+        { "name": "PORT", "value": "8000" },
+        { "name": "SEARXNG_BASE_URL", "value": "http://searxng.aisearch.local:8080" },
+        { "name": "SEARXNG_API_URL", "value": "http://searxng.aisearch.local:8080" },
+        { "name": "DATABASE_URL", "value": "postgresql://aisearch:aisearch@postgres:5432/aisearch" },
+        { "name": "JWT_SECRET", "value": "production-secret-change-me" },
+        { "name": "EMBEDDING_PROVIDER", "value": "gemini" },
+        { "name": "LLM_PROVIDER", "value": "gemini" },
+        { "name": "EMBEDDING_DIM", "value": "768" },
+        { "name": "UPLOAD_DIR", "value": "/app/uploads" },
+        { "name": "MAX_UPLOAD_BYTES", "value": "52428800" },
+        { "name": "FRONTEND_URL", "value": "http://localhost:3000" }
+      ],
+      "secrets": [
+        { "name": "GOOGLE_API_KEY", "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<YOUR_ACCOUNT_ID>:secret:aisearch/google-api-key-XXXXXX" },
+        { "name": "OPENAI_API_KEY", "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<YOUR_ACCOUNT_ID>:secret:aisearch/openai-api-key-XXXXXX" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/aisearch-backend",
+          "awslogs-region": "<AWS_REGION>",
+          "awslogs-stream-prefix": "backend"
+        }
+      }
+    }
+  ]
+}
