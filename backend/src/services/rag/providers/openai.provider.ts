@@ -4,6 +4,38 @@ import type { LLMProvider, ChatMessage, LLMOptions, StreamChunk } from './llm.in
 
 const OPENAI_BASE = 'https://api.openai.com/v1';
 
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  retries = 5,
+  initialDelay = 1000,
+  maxDelay = 16000
+): Promise<T> {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      attempt++;
+      const status = error?.response?.status || error?.status;
+      const isRateLimit = 
+        status === 429 || 
+        String(error).includes('429') ||
+        String(error?.message).includes('429') ||
+        String(error?.message).toLowerCase().includes('quota') ||
+        String(error?.message).toLowerCase().includes('rate limit') ||
+        String(error?.message).toLowerCase().includes('too many requests');
+
+      if (attempt > retries || !isRateLimit) {
+        throw error;
+      }
+      
+      const delay = Math.min(initialDelay * Math.pow(2, attempt) + Math.random() * 1000, maxDelay);
+      console.warn(`[OpenAIEmbeddingProvider] Rate limited (429). Retrying in ${Math.round(delay)}ms (attempt ${attempt}/${retries})...`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+}
+
 // ── OpenAI Embedding Provider ─────────────────────────────────────────────────
 export class OpenAIEmbeddingProvider implements EmbeddingProvider {
   readonly name = 'openai';
@@ -24,20 +56,20 @@ export class OpenAIEmbeddingProvider implements EmbeddingProvider {
   }
 
   async embed(text: string): Promise<number[]> {
-    const { data } = await axios.post(
+    const { data } = await retryWithBackoff(() => axios.post(
       `${OPENAI_BASE}/embeddings`,
       { input: text, model: this.model },
       { headers: this.headers() }
-    );
+    ));
     return data.data[0].embedding as number[];
   }
 
   async embedBatch(texts: string[]): Promise<number[][]> {
-    const { data } = await axios.post(
+    const { data } = await retryWithBackoff(() => axios.post(
       `${OPENAI_BASE}/embeddings`,
       { input: texts, model: this.model },
       { headers: this.headers() }
-    );
+    ));
     return (data.data as { embedding: number[] }[])
       .sort((a, b) => (data.data.indexOf(a) - data.data.indexOf(b)))
       .map((d) => d.embedding);

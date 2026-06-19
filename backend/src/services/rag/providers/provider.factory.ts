@@ -5,13 +5,16 @@ import { GeminiEmbeddingProvider, GeminiLLMProvider } from './gemini.provider';
 import { OpenAIEmbeddingProvider, OpenAILLMProvider } from './openai.provider';
 import { OllamaEmbeddingProvider, OllamaLLMProvider } from './ollama.provider';
 import { AnthropicLLMProvider } from './anthropic.provider';
+import { GroqLLMProvider } from './groq.provider';
 
 /**
  * Returns an EmbeddingProvider based on the EMBEDDING_PROVIDER env var.
  * Supported values: 'gemini' (default) | 'openai' | 'ollama'
+ * NOTE: Groq does NOT support an embeddings API and is intentionally excluded.
  */
 export function createEmbeddingProvider(): EmbeddingProvider {
   const provider = (process.env.EMBEDDING_PROVIDER || 'gemini').toLowerCase();
+
   switch (provider) {
     case 'openai':
       return new OpenAIEmbeddingProvider();
@@ -25,10 +28,16 @@ export function createEmbeddingProvider(): EmbeddingProvider {
 
 /**
  * Returns an LLMProvider based on the LLM_PROVIDER env var.
- * Supported values: 'gemini' (default) | 'openai' | 'ollama' | 'anthropic'
+ * Supported values: 'groq' (default) | 'gemini' | 'openai' | 'ollama' | 'anthropic'
+ *
+ * Groq is the default because:
+ *  - It uses the same GROQ_API_KEY already used for the main chat pipeline.
+ *  - It's fast (hardware-accelerated inference) and free-tier friendly.
+ *  - Its API is OpenAI-compatible so streaming works out of the box.
  */
 export function createLLMProvider(): LLMProvider {
-  const provider = (process.env.LLM_PROVIDER || 'gemini').toLowerCase();
+  const provider = (process.env.LLM_PROVIDER || 'groq').toLowerCase();
+
   switch (provider) {
     case 'openai':
       return new OpenAILLMProvider();
@@ -37,8 +46,10 @@ export function createLLMProvider(): LLMProvider {
     case 'anthropic':
       return new AnthropicLLMProvider();
     case 'gemini':
-    default:
       return new GeminiLLMProvider();
+    case 'groq':
+    default:
+      return new GroqLLMProvider();
   }
 }
 

@@ -8,7 +8,7 @@
  *   4. Google Gemini (GOOGLE_API_KEY) — FALLBACK 1c
  *   5. SearXNG raw                    — FALLBACK 2 (no LLM, raw search data)
  *
- * Embeddings always use Google text-embedding-004.
+ * Embeddings use Google gemini-embedding-001 (replaces retired text-embedding-004).
  */
 
 import { ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
@@ -207,7 +207,7 @@ class SafeEmbeddings extends Embeddings {
     super({});
     if (process.env.GOOGLE_API_KEY) {
       this.primary = new GoogleGenerativeAIEmbeddings({
-        modelName: "text-embedding-004",
+        modelName: process.env.GEMINI_EMBEDDING_MODEL || 'gemini-embedding-001',
       });
     }
     if (process.env.OPENAI_API_KEY) {
